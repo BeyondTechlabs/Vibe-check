@@ -43,7 +43,7 @@ Since last check (2026-11-02): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 ne
 | In vibe-check | 653 |
 | ➖ Don't apply to this app | 412 |
 | **Apply to this app** | **241** |
-| ✅ Passed | 198 |
+| ✅ Passed | 198 (6 on your answer alone, not proven by the code) |
 | ❌ Must fix (blockers) | 2 |
 | ⚠️ Should fix | 29 |
 | ❓ Need your answer | 12 |
@@ -246,7 +246,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.6 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.7 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -261,7 +261,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.6 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.7 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back

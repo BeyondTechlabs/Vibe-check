@@ -96,11 +96,35 @@ def bar(score: int) -> str:
 
 
 EU_ONLY = set()   # 🔴 checks that block only for EU/EEA users: marked *(blocker for EU users)* in the checklist
+ANSWER_ADDS = {}  # v3.6.7: things an answer added to the profile (module or 'eu-users') -> why, from answers.md 'ADDS:' lines
+ON_WORD = re.compile(r"\b(?:user (?:confirmed|says|said|told)|per (?:the )?user|the user confirms|according to the user)\b", re.I)
+
+
+def is_on_word(ev: str) -> bool:
+    """A PASS that rests only on the user's answer (ANSWER: ... · code: ...)."""
+    return ev.strip().upper().startswith("ANSWER:")
+
+
+def load_answers(vc_dir: Path):
+    """answers.md: '| ID | question | answer |' rows (answer 'skipped…' = not answered) and 'ADDS: <module> · <why>' lines."""
+    path = vc_dir / "answers.md"
+    text = path.read_text("utf-8") if path.exists() else ""
+    answered = {}
+    for line in text.splitlines():
+        cells = [x.strip() for x in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and ID_RX.match(cells[0]):
+            answered[cells[0]] = not cells[2].lower().startswith("skipped")
+    adds = {}
+    for m in re.finditer(r"^\s*[-*]?\s*ADDS:\s*([\w-]+)\s*(?:[·:—-]\s*(.*))?$", text, re.M):
+        adds[m.group(1).lower()] = (m.group(2) or "").strip() or "your answer"
+    return text, answered, adds
 
 
 def downgraded(cid, results):
     """A FAIL on an EU-only blocker, recorded as 'outside the EU', counts as should-fix."""
     if cid not in EU_ONLY or cid not in results:
+        return False
+    if "eu-users" in ANSWER_ADDS:   # an answer said there are EU users: the blocker stays a blocker
         return False
     blob = (results[cid][1] + " " + results[cid][2]).lower()
     return "outside the eu" in blob or "no eu users" in blob
@@ -179,7 +203,8 @@ def compute_result(required, results, checks, level, date):
         "score": score, "raw_score": raw, "capped": capped, "band": band_of(score),
         "totals": {"in_vibe_check": len(checks), "at_this_level": len(required), "dont_apply": counts["NA"],
                    "apply": applicable, "passed": counts["PASS"], "blockers": counts["BLOCKER"], "should_fix": counts["SHOULD"],
-                   "need_answer": counts["ASK"], "not_done": counts["TODO"], "checked": applicable - counts["TODO"],
+                   "need_answer": counts["ASK"],
+                   "on_your_word": sum(1 for c in required if status_of(c, results, checks) == "PASS" and is_on_word(results[c][1])), "not_done": counts["TODO"], "checked": applicable - counts["TODO"],
                    "questions": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask"),
                    "check_yourself": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check")},
         "areas": areas,
@@ -241,7 +266,8 @@ def build_appendix(required, results, checks):
             for c in ids:
                 if sts[c] == want:
                     ev = results[c][1] if c in results else "not checked yet"
-                    out.append(f"| {LABEL[want]} | {c} {cell(checks[c][2])} | {cell(ev)} |")
+                    mark = "✅ per your answer" if want == "PASS" and is_on_word(ev) else LABEL[want]
+                    out.append(f"| {mark} | {c} {cell(checks[c][2])} | {cell(ev)} |")
         out.append("")
     out.append(APPX_CLOSE)
     return "\n".join(out)
@@ -297,7 +323,8 @@ def print_result(res, diff):
         print(f"| In this {res['level'].title()} check | {t['at_this_level']} |")
     print(f"| ➖ Don't apply to this app | {t['dont_apply']} |")
     print(f"| **Apply to this app** | **{t['apply']}** |")
-    print(f"| ✅ Passed | {t['passed']} |")
+    ow = t.get("on_your_word", 0)
+    print(f"| ✅ Passed | {t['passed']}" + (f" ({ow} on your answer alone, not proven by the code)" if ow else "") + " |")
     print(f"| ❌ Must fix (blockers) | {t['blockers']} |")
     print(f"| ⚠️ Should fix | {t['should_fix']} |")
     print(f"| ❓ Need your answer | {t['need_answer']} ({t['questions']} questions · {t['check_yourself']} to check yourself) |")
@@ -522,6 +549,12 @@ def main() -> int:
 
     order, checks, prefixes = load_checklist()
     errors, warns = [], []
+    ans_text, answered, adds = load_answers(ledger_path.parent)
+    ANSWER_ADDS.clear(); ANSWER_ADDS.update(adds)
+    known_mods = {v[0] for v in checks.values()}
+    for a in adds:
+        if a != "eu-users" and a not in known_mods:
+            errors.append(f"answers.md: 'ADDS: {a}' isn't a module; use one of: eu-users, " + ", ".join(sorted(known_mods)))
     results = {}   # id -> (result, evidence, confidence)
     inv_rows, hit_rows, ver_rows = {}, {}, {}
     hunt_rows = []
@@ -583,9 +616,18 @@ def main() -> int:
         if r == "CAN'T TELL" and not re.match(r"^\s*(ASK|CHECK)\s*:", ev, re.I):
             errors.append(f"{key}: CAN'T TELL starts with ASK: (a question the user can answer) or CHECK: (something only they can "
                           f"check, e.g. a dashboard setting), then the reason (got '{ev[:50]}')")
-        if r in ("PASS", "FAIL"):
+        if r == "PASS" and is_on_word(ev):
+            # code before trust: say what code you looked at and why it can't decide
+            if not re.search(r"\bcode:\s*\S.{6,}", ev, re.I):
+                errors.append(f"{key}: an ANSWER: pass must also say what code you checked first: "
+                              f"'ANSWER: <their answer> · code: <what you looked at, and why it can't decide>'")
+        elif r == "PASS" and (ON_WORD.search(ev) or answered.get(key)) and not re.search(r":\d|`[^`]+`|https?://", ev):
+            errors.append(f"{key}: this pass rests on the user's answer: write it 'ANSWER: <answer> · code: <what you checked>' "
+                          f"(shown as ✅ per your answer), or cite the code that proves it")
+        on_word = r == "PASS" and is_on_word(ev)
+        if r in ("PASS", "FAIL") and not on_word:
             evidence_problems += check_evidence(key, ev, root)
-        if r in ("PASS", "FAIL") and not CHECKABLE.search(ev):
+        if r in ("PASS", "FAIL") and not on_word and not CHECKABLE.search(ev):
             errors.append(f"{key}: {r} evidence must point to something checkable (file:line, command, URL, "
                           f"config value, dashboard setting or inventory/sweep item), got '{ev[:60]}'")
         if r == "PASS":
@@ -683,15 +725,22 @@ def main() -> int:
     prof_path = ledger_path.parent / "profile.json"
     if prof_path.exists():
         must = json.loads(prof_path.read_text("utf-8")).get("modules_with_evidence", {})
+    else:
+        must = {}
+    # v3.6.7: an answer that adds to the profile (students, payments, health…) makes that module required too
+    for a, why in adds.items():
+        if a != "eu-users":
+            must.setdefault(a, [f"your answer: {why}"])
+    if must:
         for mod, where in must.items():
             ids = [c for c, v in checks.items() if v[0] == mod]
             if not ids:
                 continue
             rs = [results.get(c) for c in ids]
             if all(r and r[0] == "N/A" for r in rs) and not any("DEAD CODE:" in r[1] and CHECKABLE.search(r[1]) for r in rs):
-                errors.append(f"profile: the code shows '{mod}' applies (e.g. {where[0]}), so it can't be N/A as a whole. "
+                errors.append(f"profile: '{mod}' applies ({where[0] if where[0].startswith('your answer') else 'the code shows it, e.g. ' + where[0]}), so it can't be N/A as a whole. "
                               "Check its items one by one, or prove the code is unused: N/A with 'DEAD CODE: <proof>'")
-    elif level != "quick":
+    if not prof_path.exists() and level != "quick":
         warns.append("no profile.json next to the ledger: run profile.py first (or say why in the report)")
 
     # inventory accounting
@@ -948,8 +997,6 @@ def main() -> int:
             write_appendix(report_path, build_appendix(required, results, checks))
             rep_text = report_path.read_text("utf-8")
             # questions: every ❓ the user can answer was asked (or they chose to skip), before the report
-            ans_path = ledger_path.parent / "answers.md"
-            ans_text = ans_path.read_text("utf-8") if ans_path.exists() else ""
             unasked = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask" and c not in ans_text]
             if unasked:
                 errors.append(f"REPORT: {len(unasked)} question(s) weren't asked ({', '.join(unasked[:6])}…): ask them as choices before the "

@@ -4,7 +4,13 @@ Read this at Step 5, before writing the report. The exact layouts are in `report
 
 ## First: ask the questions (before writing anything)
 
-When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`. Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md): 4 per round, the most serious checks first, *Skip the rest* always allowed. Turn each answer into PASS, FAIL or a `CHECK:` row in the ledger, and record it in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`). `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
+When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`. Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md): 4 per round, the most serious checks first, *Skip the rest* always allowed. Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
+
+1. **Code before trust.** Look at the code the answer is about. If the code settles it, the code decides: PASS or FAIL with that evidence. When the code contradicts the answer, FAIL, and the finding says *"You said X; `file:line` shows Y"*. Only when the code can't decide does the answer settle it: `PASS` with `ANSWER: … · code: …` (shown as ✅ per your answer), `FAIL`, or a `CHECK:` row when the user should look.
+2. **Follow-up checks.** If an answer adds to the profile (students or children, payments, health or financial data, users posting or chatting, other languages, AI features, EU users…), write `ADDS: <module>` in `.vibe-check/answers.md`, tell the user what it adds (*"Students use it: that adds 38 checks for student data, about 10 minutes"*) and check that module before the report. Any new `ASK:` items it raises are asked in one more round.
+3. Re-run `coverage.py` and say what moved.
+
+ `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
 
 **Without a question tool**, ask the same questions as a numbered list the user can answer in one line:
   ```text

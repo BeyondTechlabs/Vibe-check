@@ -431,6 +431,35 @@ def main() -> int:
         check(cov2.status_of("LAW-001", _r, _ck) == "BLOCKER", "EU-only: LAW-001 with EU users stays a blocker")
         _r = {"SEC-001": ("FAIL", "auth.ts:1 x · outside the EU", "Confirmed")}
         check(cov2.status_of("SEC-001", _r, _ck) == "BLOCKER", "EU-only: other blockers can't be downgraded")
+        # v3.6.7 code before trust: a pass that rests on the user's answer says so, and says what code was checked first
+        aid = ids[2]
+        base = [x for x in full if not x.startswith(f"| {aid} |")] + inv_rows + hit_rows
+        r = run("coverage.py", str(ledger(out, base + [f"| {aid} | PASS | ANSWER: only admins open this page |"])))
+        check(r.returncode == 1 and "what code you checked first" in r.stdout, "answers: an ANSWER: pass without 'code:' should be rejected")
+        r = run("coverage.py", str(ledger(out, base + [f"| {aid} | PASS | user confirmed only admins open this page via the dashboard |"])))
+        check(r.returncode == 1 and "rests on the user's answer" in r.stdout, "answers: an unlabelled 'user confirmed' pass should be rejected")
+        r = run("coverage.py", str(ledger(out, base + [f"| {aid} | PASS | ANSWER: only admins open this page · code: no route guard decides it, access is set in the host dashboard |"])))
+        rj3 = json.loads((out / "results.json").read_text())["totals"]
+        check(r.returncode == 0 and rj3["on_your_word"] == 1 and "on your answer alone" in r.stdout,
+              f"answers: a labelled ANSWER: pass should be accepted and counted apart:\n{r.stdout[-400:]}")
+        # v3.6.7 follow-up checks: an answer that adds to the profile makes that module required
+        core_or_code = set(cov2.CORE) | set(prof)
+        extra = next(m for m in ("health", "community", "i18n", "mobile", "desktop-extensions") if m not in core_or_code)
+        pre = next(v.split("-")[0] for v, c in _ck.items() if c[0] == extra)
+        no_extra = [x for x in full if not x.startswith(f"| {pre}-")] + [f"| {pre}-* | N/A | profile: no {extra} found in the code |"] + inv_rows + hit_rows
+        r = run("coverage.py", str(ledger(out, no_extra)))
+        check(r.returncode == 0, f"answers: {extra} N/A with no evidence and no answer should be fine:\n{r.stdout[-300:]}")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nADDS: {extra} · Q4: yes, we store it\n")
+        r = run("coverage.py", str(ledger(out, no_extra)))
+        check(r.returncode == 1 and f"'{extra}' applies (your answer" in r.stdout, f"answers: an answer adding {extra} must make it required:\n{r.stdout[-300:]}")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nADDS: payments-ish · yes\n")
+        r = run("coverage.py", str(ledger(out, no_extra)))
+        check(r.returncode == 1 and "isn't a module" in r.stdout, "answers: an unknown ADDS: module should be rejected with the list")
+        cov2.ANSWER_ADDS.update({"eu-users": "Q5"})
+        _r = {"LAW-001": ("FAIL", "index.html:17 fonts.googleapis.com · outside the EU", "Confirmed")}
+        check(cov2.status_of("LAW-001", _r, _ck) == "BLOCKER", "answers: 'ADDS: eu-users' must keep LAW-001 a blocker")
+        cov2.ANSWER_ADDS.clear()
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
         ledger(out, ok_rows)   # put the ledger back for the fix-plan tests below
 
         # v3.1: fix plan keeps statuses between runs

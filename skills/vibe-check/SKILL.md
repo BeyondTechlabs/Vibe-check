@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.6.6"
+  version: "3.6.7"
   homepage: "https://github.com/vikneshchandrasekaran21/Vibe-check"
 ---
 
@@ -63,9 +63,8 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 - **Write every question so it fits any of those tools:** at most **4 questions per round**, each with a short label (12 characters or fewer), **2 to 4 options**, the **recommended option first** and marked *(Recommended)*, and a way to say **Not sure** (an option, or the tool's own "Other").
 - **Never ask what the code already answers.** Pre-select or recommend the answer the code shows and say so: *"(found in your code: date-of-birth field in app/signup/page.tsx)"*.
 - **Without a question tool,** ask the same questions as a numbered list the user answers in one line (format in `references/reporting.md`).
-- **Every answer changes the result straight away:** update the ledger row, re-run `coverage.py`, and say what moved (*"Backups: never restored → ⚠️ OPS-027 · Score 71 → 69"*). "Not sure" keeps the check ❓ and adds it to *Only you can check*.
-- **Save the answers** in `.vibe-check/answers.md` (question, answer, date) and reuse them next time: never ask the same thing twice unless the code has changed what the answer should be.
-- Group long lists by topic; questions about the most serious checks come first.
+- **Every answer changes the result straight away:** check the code first (it wins), update the ledger row (`ANSWER:` when the answer alone decides; `ADDS:` when it adds an area to check), re-run `coverage.py`, and say what moved (*"Backups: never restored → ⚠️ OPS-027 · Score 71 → 69"*). "Not sure" keeps the check ❓ and adds it to *Only you can check*.
+- **Save the answers** in `.vibe-check/answers.md` and reuse them; ask again only if the code changed. Most serious checks first.
 
 ## Ground rules (never break these)
 

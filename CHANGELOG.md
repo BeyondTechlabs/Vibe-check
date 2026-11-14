@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.7 (2026-11-14)
+
+**Your answers are checked against the code, and can open new checks.**
+- **The code before your word.** For each answer, vibe-check looks at the code first. If the code settles it, the code decides. If the code contradicts your answer, the check fails, and the report says *"You said X; this line shows Y"*. Only when the code can't decide does your answer settle it, and that pass is written `ANSWER: … · code: …`, shown as **✅ per your answer**, and counted apart in the totals (*"198 passed (6 on your answer alone)"*). A pass that says "user confirmed" without that label is rejected.
+- **Answers can open new checks.** If an answer adds to the app's profile (students use it, it stores health data, there are EU users…), it's recorded as `ADDS: <module>` in `answers.md`. vibe-check tells you how many checks that adds and roughly how long, and checks that area before the report. `coverage.py` refuses the report while that module is still marked N/A. `ADDS: eu-users` keeps EU-only blockers (LAW-001) as blockers.
+
 ## v3.6.6 (2026-11-14)
 
 **Asks before it acts, never touches your code, and shows the proof for every check.**

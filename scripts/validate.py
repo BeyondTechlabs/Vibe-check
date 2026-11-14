@@ -365,6 +365,15 @@ for _name, _txt, _musts in [
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.6)")
 if "*(blocker for EU users)*" not in (REFS / "lawsuits.md").read_text(): err("lawsuits.md: LAW-001 must carry *(blocker for EU users)*")
 
+# 28. v3.6.7 code before trust; answers that add to the profile open new checks
+for _must in ["def load_answers(", "ANSWER_ADDS", "def is_on_word(", "what code you checked first", "rests on the user's answer", "isn't a module", "per your answer"]:
+    if _must not in _cov: err(f"coverage.py is missing '{_must}' (v3.6.7)")
+for _name, _txt, _musts in [("ledger.md", _led, ["`ANSWER:", "· code:", "`ADDS:", "eu-users"]),
+                            ("reporting.md", _rep, ["**Code before trust.**", "**Follow-up checks.**", "`ADDS: <module>`"]),
+                            ("SKILL.md", skill_main, ["check the code first (it wins)", "`ADDS:`"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.7)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
