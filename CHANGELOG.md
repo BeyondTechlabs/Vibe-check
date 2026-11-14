@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.9 (2026-11-14)
+
+**The vibe-check logo on the PDF.**
+- The first page of the PDF opens with the full dot-matrix vibe-check logo from the README banner, the *Pre-launch audit for AI-built apps* line, and the project name and date. Every other page has the logo, small, in its top band. The logo is drawn from the banner's own dots, so it stays sharp at any zoom.
+- A table's header row is never left alone at the bottom of a page.
+
 ## v3.6.8 (2026-11-14)
 
 **Download the report, and send it as a PDF.**

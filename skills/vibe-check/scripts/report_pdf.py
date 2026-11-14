@@ -18,6 +18,7 @@ HERE = Path(__file__).resolve().parent
 W, H = 595.28, 841.89                     # A4
 ML, MR, MT, MB = 48, 48, 66, 50           # margins (top leaves room for the brand band)
 CW = W - ML - MR
+FIRST_TOP = 118                           # page 1 has the tall band with the full logo
 
 # ---- brand ----
 INK = (0.043, 0.043, 0.047)               # #0b0b0c, the banner background
@@ -32,6 +33,30 @@ STATUS = {"✅": "green", "✔": "green", "✓": "green", "🟢": "green", "❌"
           "⚠": "amber", "🟡": "amber", "❓": "blue", "🔵": "blue", "➖": "grey", "🔧": "purple"}
 SWAP = {"→": "->", "←": "<-", "↔": "<->", "⇒": "=>", "≥": ">=", "≤": "<=", "≠": "!=", "≈": "~", "₹": "Rs ", "✗": "x",
         " ": " ", " ": " ", " ": " ", "↩": "", "⬆": "^", "−": "-", "‑": "-"}
+
+# The vibe-check logo: the dot-matrix wordmark from assets/banner.svg ('#' = lit dot, '.' = unlit dot).
+LOGO = """#...#.#####.####..#####........###..#...#.#####..###..#...#
+#...#...#...#...#.#...........#...#.#...#.#.....#...#.#..#.
+#...#...#...#...#.#...........#.....#...#.#.....#.....#.#..
+#...#...#...####..####..#####.#.....#####.####..#.....##...
+#...#...#...#...#.#...........#.....#...#.#.....#.....#.#..
+.#.#....#...#...#.#...........#...#.#...#.#.....#...#.#..#.
+..#...#####.####..#####........###..#...#.#####..###..#...#""".splitlines()
+
+
+def logo_ops(x, top, pitch, unlit=(0.137, 0.137, 0.149), lit=(0.914, 0.914, 0.918)):
+    """Dots as round-capped zero-length lines: small, sharp at any zoom."""
+    out = ["1 J"]
+    for colour, char, size in ((unlit, ".", 0.38), (lit, "#", 0.66)):
+        out.append("%.3f %.3f %.3f RG %.2f w" % (colour + (pitch * size,)))
+        for r, row in enumerate(LOGO):
+            for c, ch in enumerate(row):
+                if ch == char:
+                    cx, cy = x + c * pitch, top - r * pitch
+                    out.append("%.2f %.2f m %.2f %.2f l S" % (cx, cy, cx, cy))
+    out.append("0 J")
+    return " ".join(out)
+
 
 # Adobe font metrics (1/1000 em) for the characters we draw; anything else uses 556.
 _HR = [278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278] + [556] * 10 + \
@@ -177,7 +202,7 @@ class Doc:
     def new_page(self):
         self.ops = []
         self.pages.append(self.ops)
-        self.y = H - MT
+        self.y = H - (FIRST_TOP if len(self.pages) == 1 else MT)
 
     def ensure(self, h):
         if self.y - h < MB:
@@ -348,7 +373,9 @@ class Doc:
             self.y -= h
             self.line(ML, self.y, ML + tw, self.y, RULE, 0.5)
 
-        self.ensure(size * 4)
+        def row_h(ri):
+            return max(len(x) for x in row_lines(ri)) * size * 1.3 + 2 * pad - 1
+        self.ensure(row_h(0) + (row_h(1) if len(rows) > 1 else 0) + 4)   # never leave a header alone at the bottom
         self.line(ML, self.y, ML + tw, self.y, RULE, 0.5)
         draw_row(0, True)
         for ri in range(1, len(rows)):
@@ -393,14 +420,28 @@ def brand(doc, ops, n, total):
     pre = []
     def c(rgb):
         pre.append("%.3f %.3f %.3f rg" % rgb)
-    c(INK); pre.append("0 %.2f %.2f 40 re f" % (H - 40, W))
-    c(GREEN); pre.append("0 %.2f %.2f 2 re f" % (H - 42, W))
-    # the check mark
-    pre.append("%.3f %.3f %.3f RG 2.6 w 1 J 1 j %.2f %.2f m %.2f %.2f l %.2f %.2f l S" % (
-        GREEN + (ML, H - 21, ML + 5, H - 26.5, ML + 14, H - 14.5)))
-    pre.append("BT /F2 14 Tf %.2f %.2f Td 0.914 0.914 0.918 rg %s Tj ET" % (ML + 21, H - 25.5, pdf_str("vibe-check")))
-    right = "Pre-launch audit" + (" · " + doc.project if doc.project else "")
-    pre.append("BT /F1 8.5 Tf %.2f %.2f Td 0.62 0.63 0.66 rg %s Tj ET" % (W - MR - width(right, "R", 8.5), H - 24.5, pdf_str(right)))
+    if n == 1:      # the cover band, like the README banner
+        bh = 104
+        c(INK); pre.append("0 %.2f %.2f %d re f" % (H - bh, W, bh))
+        c(GREEN); pre.append("0 %.2f %.2f 2.5 re f" % (H - bh - 2.5, W))
+        pitch = 5.2
+        lx = (W - 58 * pitch) / 2
+        pre.append(logo_ops(lx, H - 24, pitch))
+        sub = "PRE-LAUNCH AUDIT FOR AI-BUILT APPS"
+        size, track = 8.6, 2.6
+        sw = len(sub) * 600 * size / 1000 + track * (len(sub) - 1)
+        pre.append("BT /F4 %.1f Tf %.2f Tc %.2f %.2f Td 0.631 0.631 0.667 rg %s Tj ET 0 Tc" % (size, track, (W - sw) / 2, H - 78, pdf_str(sub)))
+        tag = (doc.project + " · " if doc.project else "") + (doc.date or "")
+        if tag:
+            tw_ = width(tag, "R", 8)
+            pre.append("%.3f %.3f %.3f RG 5 w 1 J %.2f %.2f m %.2f %.2f l S 0 J" % (GREEN + ((W - tw_) / 2 - 8, H - 93.4, (W - tw_) / 2 - 8, H - 93.4)))
+            pre.append("BT /F1 8 Tf %.2f %.2f Td 0.443 0.443 0.478 rg %s Tj ET" % ((W - tw_) / 2, H - 96, pdf_str(tag)))
+    else:           # a slim band with the small logo
+        c(INK); pre.append("0 %.2f %.2f 40 re f" % (H - 40, W))
+        c(GREEN); pre.append("0 %.2f %.2f 2 re f" % (H - 42, W))
+        pre.append(logo_ops(ML, H - 10.5, 2.75))
+        right = "Pre-launch audit" + (" · " + doc.project if doc.project else "")
+        pre.append("BT /F1 8.5 Tf %.2f %.2f Td 0.62 0.63 0.66 rg %s Tj ET" % (W - MR - width(right, "R", 8.5), H - 24.5, pdf_str(right)))
     left = "vibe-check v%s · %s · made on your computer, nothing was sent anywhere" % (doc.version, doc.date)
     pg = "Page %d of %d" % (n, total)
     pre.append("%.3f %.3f %.3f RG 0.5 w %.2f 34 m %.2f 34 l S" % (RULE + (ML, W - MR)))

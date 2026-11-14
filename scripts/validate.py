@@ -374,9 +374,14 @@ for _name, _txt, _musts in [("ledger.md", _led, ["`ANSWER:", "· code:", "`ADDS:
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.7)")
 
-# 29. v3.6.8 hand the report over, with a PDF
+# 29. v3.6.8 hand the report over, with a PDF (v3.6.9: with the logo, the same dots as the banner)
+import re as _re
+_on = _re.search(r'<g class="on">(.*?)</g>', (ROOT / "assets" / "banner.svg").read_text(), _re.S)
+_lit = len(_re.findall(r"<circle", _on.group(1))) if _on else 0
+_logo = _re.search(r'LOGO = """(.*?)"""', (SK / "scripts" / "report_pdf.py").read_text(), _re.S)
+if not _logo or _logo.group(1).count("#") != _lit: err(f"report_pdf.py LOGO must have the banner's {_lit} lit dots (assets/banner.svg)")
 _pdf = (SK / "scripts" / "report_pdf.py").read_text() if (SK / "scripts" / "report_pdf.py").exists() else ""
-for _must in ["def build_pdf(", "find_secrets", "results.json", "NO PDF"]:
+for _must in ["def build_pdf(", "find_secrets", "results.json", "NO PDF", "def logo_ops(", "LOGO = "]:
     if _must not in _pdf: err(f"report_pdf.py is missing '{_must}'")
 if re.search(r"^\s*(import|from)\s+(requests|urllib|http|socket|reportlab|fpdf)\b", _pdf, re.M): err("report_pdf.py must use the standard library only and never touch the network")
 for _name, _txt, _musts in [("reporting.md", _rep, ["## Hand over the report", "report_pdf.py", "full path", "xdg-open"]),
