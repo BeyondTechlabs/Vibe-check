@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.6.11 (2026-11-14)
+
+**"Check these yourself" is a last resort, not a dumping ground.** A real run had 0 questions and 288 check-yourself items. About 100 could have been settled from the code or the database, and about 55 were questions in disguise.
+- **Settle it first, in this order:** the code, then the database read-only, then a question. Only then a `CHECK:`, written as `CHECK: <place> → <what to look at> · tried: <the concrete search you ran>`.
+- **`coverage.py` rejects a `CHECK:`** that:
+  - has no place, or names a code file as the place;
+  - has no concrete `tried:` (a command, file, folder, query or search term);
+  - is a question in disguise ("Supply…", "Do you have…");
+  - already contains the user's answer.
+- **The database is read, not handed to you.** If you allowed read-only access, database items must be settled with `SQL: <query> → <result>`. If not, it asks once: *"May I read your database, read-only?"*. Backups and restores stay dashboard items.
+- **One visit per place.** `coverage.py --check-list` groups the items by place with a time estimate (*Lovable Cloud → Auth settings: 14 items, about 8 min*). The report must list every item. You can go through them place by place, or paste a screenshot, and each one becomes a pass or a fail.
+- **A test copy instead of skipping.** When the preview and the live app share one database, it offers a test copy with its own database for the live tests.
+
 ## v3.6.10 (2026-11-14)
 
 **Fixed: the logo didn't show in some PDF viewers.**

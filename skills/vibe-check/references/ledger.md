@@ -16,7 +16,7 @@ Date: YYYY-MM-DD
 | SEC-001 | PASS | src/lib/auth.ts:4 uses Clerk; no custom password code (grep "bcrypt\|jwt.sign": 0 hits) |
 | SEC-030 | FAIL 🔎 Likely | app/notes/[id]/page.tsx:41 renders note.body with dangerouslySetInnerHTML |
 | SEC-047 | CAN'T TELL | ASK: invite codes come from an external service. Are they single-use and do they expire? |
-| OPS-031 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication: is 2FA on? |
+| OPS-031 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication → 2FA is on for every admin · tried: `rg -i "2fa|mfa" .github/ docs/` found nothing; it's an account setting |
 | PLT-011..PLT-015 | N/A | not on Firebase |
 | HLT-* | N/A | no health, medical or fitness data |
 | INV-api_routes | 47/47 | every route traced to its auth check |
@@ -27,7 +27,15 @@ Date: YYYY-MM-DD
 ```
 
 - **Results:** `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL`. Every row needs its own evidence or reason. Copy-pasted evidence is rejected.
-- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look (a dashboard setting, a browser run), followed by exactly where to look. `ASK:` items are asked before the report (see `reporting.md`); `CHECK:` items become the *Check these yourself* list.
+- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look. `ASK:` items are asked before the report (see `reporting.md`); `CHECK:` items become the *Check these yourself* list.
+- **Settle it yourself first; `CHECK:` is the last resort.** Before writing either, work through this order, and stop at the first that settles it:
+  1. **The code:** search and read it (`rg`, the files, the migrations, the config). If the code shows it, it's PASS or FAIL. "It's a lot of files" is never a reason for `CHECK:`.
+  2. **The database, read-only:** policies, grants, functions, views, cron jobs, tables (audit logs, roles), storage buckets. With access, write `SQL: <query> → <result>` as evidence. Without it, ask once, as a choice: *"May I read your database, read-only? It settles N checks."* and write `DATABASE: yes` or `DATABASE: no` in `.vibe-check/answers.md`. Backups and restores are dashboard items, not SQL.
+  3. **A question:** anything the user knows from memory (do you have a written plan, a policy, a contract, a process; who does X) is `ASK:` and is asked as a choice, never `CHECK:`.
+  4. **Only then `CHECK:`,** for a place outside the code and database that only the user can open, written exactly as `CHECK: <place> → <what to look at> · tried: <the concrete search you ran first>`, for example `CHECK: Lovable Cloud → Users → Auth settings → CAPTCHA is on · tried: \`rg -i captcha src/ supabase/\` found nothing`. The running app counts as a place (`CHECK: the running app → …`) when live tests weren't allowed.
+  
+  `coverage.py` rejects a `CHECK:` with no place, a code file as the place, no concrete `tried:`, a question in disguise, an answer already inside it, or a database item when you have (or could ask for) read-only access. `coverage.py --check-list` prints the items grouped by place for the report.
+- **A screenshot settles a `CHECK:`.** When the user pastes one, read it and write `PASS` or `FAIL` with `screenshot: <what it shows>, pasted <date>`.
 - **A pass that rests on the user's answer is written as one:** `| SEC-047 | PASS | ANSWER: single-use, expire in 7 days · code: codes come from an outside service, nothing here decides it |`. The `code:` part says what you looked at first and why the code can't settle it. The report shows it as **✅ per your answer**, and the totals count it apart. A pass with "user confirmed" and no `ANSWER:` is rejected. If the code can settle it, the code decides, never the answer.
 - **An answer that adds to the profile gets an `ADDS:` line in `.vibe-check/answers.md`:** `ADDS: kids-education · Q2: students use it`, `ADDS: fintech`, `ADDS: health`, `ADDS: eu-users`. That module then can't stay `N/A`: check its items before the report. `eu-users` keeps EU-only blockers (LAW-001) as blockers.
 - **Evidence that's easy to verify:** cite `path:line` (a shortened path is fine when it matches only one file) and quote code as it appears. When `coverage.py` rejects a row it says why and shows the closest real line: correct that row once and move on. Don't rewrite rows that passed. **This is tidying the audit notes, never "fixing"**: that word is only for changing the user's code after they approve.

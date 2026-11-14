@@ -2,6 +2,10 @@
 
 Load this file when the app can run locally or the user has a **staging or preview URL**, at the Full and Enterprise levels. Reading code shows what *should* happen; these tests show what *does* happen when someone actually tries. Each test is quick, safe and repeatable.
 
+## When preview and production share one database
+
+Many app builders (Lovable, Bolt, Replit) point the preview at the same database as the live app, so live tests there would touch real users. Don't skip the whole area silently: offer, as a choice, a **separate test copy** with its own database (duplicate or remix the project, or a database branch where the platform has one), with payments in test mode. If the user says no, the running-app items stay `CHECK: the running app → …`.
+
 ## The rules for live tests
 - **Only with the user's OK, and never against production.** Ask once, as a choice, with the cost: *"Run the app locally and test it with two test accounts? Adds about 10–20 minutes. Nothing touches production."* · *Yes (Recommended)* · *Skip live tests*. Run it with a time limit (stop it when the tests end, and after 20 minutes at most). Without a yes, mark the tests `CAN'T TELL` with the exact command for the user. Production stays **read-only** (ground rule 6): GET and HEAD requests only.
 - **Production data stays closed.** Never open, export or query a copy of production data (a database export, a backup, a `.wrangler` or `.sqlite` copy) without asking first, as a choice. If one is already in the project, report it (who could read it, should it be there?) and don't read it.

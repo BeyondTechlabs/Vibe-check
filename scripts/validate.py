@@ -389,6 +389,17 @@ for _name, _txt, _musts in [("reporting.md", _rep, ["## Hand over the report", "
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.8)")
 
+# 30. v3.6.11 CHECK: is the last resort (code, then the database read-only, then a question)
+for _must in ["def check_problems(", "def check_groups(", "--check-list", "CONCRETE", "DATABASE: yes", "settle it with 'SQL:"]:
+    if _must not in _cov: err(f"coverage.py is missing '{_must}' (v3.6.11)")
+for _name, _txt, _musts in [("ledger.md", _led, ["**Settle it yourself first; `CHECK:` is the last resort.**", "· tried:", "`SQL: <query> → <result>`", "`DATABASE: yes`"]),
+                            ("reporting.md", _rep, ["--check-list", "shrink the check-yourself list"]),
+                            ("report-template.md", _tpl, ["coverage.py --check-list"]),
+                            ("helper-brief.md", _hb, ["**Settle it yourself first:**"]),
+                            ("live-tests.md", _lt, ["share one database", "test copy"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.11)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")

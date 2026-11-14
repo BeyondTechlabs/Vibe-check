@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.6.10"
+  version: "3.6.11"
   homepage: "https://github.com/vikneshchandrasekaran21/Vibe-check"
 ---
 
@@ -165,7 +165,7 @@ Then write down:
 
 ## Step 4: Run the modules (one at a time, into the ledger)
 
-**Read `references/ledger.md` now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (only the user can look). Profile modules the profile rules out are never opened: one `N/A` row each.
+**Read `references/ledger.md` now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (last resort: after the code, the database read-only, and a question). Profile modules the profile rules out are never opened: one `N/A` row each.
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, and write its rows to the ledger immediately. On a big app, resume with `python3 <skill-folder>/scripts/coverage.py --remaining` instead of getting shallower.
 - **Evidence is checked against the files:** `coverage.py` re-opens every cited `file:line` and every quoted line of code. Re-read before you quote.

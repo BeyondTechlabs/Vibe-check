@@ -10,6 +10,8 @@ When every module is checked, collect the `CAN'T TELL` rows that start with `ASK
 2. **Follow-up checks.** If an answer adds to the profile (students or children, payments, health or financial data, users posting or chatting, other languages, AI features, EU users…), write `ADDS: <module>` in `.vibe-check/answers.md`, tell the user what it adds (*"Students use it: that adds 38 checks for student data, about 10 minutes"*) and check that module before the report. Any new `ASK:` items it raises are asked in one more round.
 3. Re-run `coverage.py` and say what moved.
 
+**Before the questions, shrink the check-yourself list.** Every `CHECK:` row must survive the order in `ledger.md` (code, then the database read-only, then a question). If any are about the database and you have no access yet, the database question goes in the first round. After the questions, offer the grouped list from `coverage.py --check-list` as one choice: *Go through them now, one place at a time (Recommended)* · *Put them in the report*. Going through them, for each place say what to open and what to look for; the user answers for the whole group, ticks items, or pastes a screenshot, and each item becomes PASS or FAIL.
+
  `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
 
 **Without a question tool**, ask the same questions as a numbered list the user can answer in one line:

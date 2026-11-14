@@ -26,10 +26,10 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 | SEC-015 | FAIL 🔬 Confirmed | app/api/invoices/[id]/route.ts:12 `findUnique({ where: { id } })` has no owner filter; middleware.ts only checks login |
 | SEC-016 | PASS | lib/roles.ts:3 roles defined once; app/api/admin/route.ts:5 checks `requireRole("admin")` |
 | SEC-074 | N/A | no GraphQL in the project (inventory: 0 GraphQL endpoints) |
-| SEC-010 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication: is 2FA on for admins? |
+| SEC-010 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication → 2FA is on for admins · tried: `rg -i "2fa|mfa" .` found nothing; it's an account setting |
 ```
 
-Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` (starting `ASK:` for a question the user can answer, or `CHECK:` for something only they can look at). Ranges and `*` only for N/A. Each row needs its own evidence. Never change a project file: an audit only reads.
+Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` (starting `ASK:` for a question the user can answer, or `CHECK:` for a place outside the code and database only they can open). **Settle it yourself first:** read the code, then the database read-only (`SQL: <query> → <result>`), then make it a question; `CHECK:` is the last resort and needs `<place> → <what> · tried: <the concrete search you ran>` (see `ledger.md`). Ranges and `*` only for N/A. Each row needs its own evidence. Never change a project file: an audit only reads.
 
 ## You return
 Post one line when you start and one when you finish (`✅ security · 83 checks · 2 blockers`). Return only a short summary to the main agent: the module, how many checks, and the counts of PASS, FAIL, N/A and CAN'T TELL, plus the IDs of any 🔴 FAIL. The details are in your ledger file.

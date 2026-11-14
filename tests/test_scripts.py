@@ -417,9 +417,9 @@ def main() -> int:
         # CAN'T TELL must say whether it's a question (ASK:) or something to check (CHECK:)
         r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | ")] + full[2:] + inv_rows + hit_rows)))
         check(r.returncode == 1 and "ASK:" in r.stdout and "CHECK:" in r.stdout, "coverage: CAN'T TELL without ASK:/CHECK: should be rejected")
-        r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | CHECK: Cloudflare → 2FA ")] + full[2:] + inv_rows + hit_rows)))
+        r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | CHECK: Cloudflare → Account → 2FA is on for every member · tried: `rg -i 2fa` found nothing; 2FA lives only in the dashboard ")] + full[2:] + inv_rows + hit_rows)))
         rj2 = json.loads((out / "results.json").read_text())["totals"]
-        check(rj2["check_yourself"] == 1 and rj2["questions"] == 0 and "(0 questions · 1 to check yourself)" in r.stdout,
+        check(rj2["check_yourself"] == 1 and rj2["questions"] == 0 and "(0 questions · 1 to check yourself in 1 place)" in r.stdout,
               f"totals: CHECK: items should count as 'to check yourself': {rj2}")
         # evidence is forgiving where harmless: a shortened path that matches one file, and quote style in code
         cited0 = REAL[1 % len(REAL)]                      # full[0] cites REAL[1]
@@ -472,6 +472,41 @@ def main() -> int:
         _r = {"LAW-001": ("FAIL", "index.html:17 fonts.googleapis.com · outside the EU", "Confirmed")}
         check(cov2.status_of("LAW-001", _r, _ck) == "BLOCKER", "answers: 'ADDS: eu-users' must keep LAW-001 a blocker")
         cov2.ANSWER_ADDS.clear()
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+        # v3.6.11: CHECK: only for places outside the code and database, after trying them first
+        cid_ = full[1].split("|")[1].strip()
+        def chk(ev):
+            rows_ = [full[0], f"| {cid_} | CAN'T TELL | {ev} |"] + full[2:] + inv_rows + hit_rows
+            return run("coverage.py", str(ledger(out, rows_)))
+        r = chk("CHECK: Cloudflare → 2FA on")
+        check(r.returncode == 1 and "tried first" in r.stdout, "check: a CHECK: without 'tried:' should be rejected")
+        r = chk("CHECK: Cloudflare → 2FA on · tried: searched the code, nothing there")
+        check(r.returncode == 1 and "concretely" in r.stdout, "check: a vague 'tried:' should be rejected")
+        r = chk("CHECK: src/pages/Auth.tsx:40 → reduced motion · tried: nothing yet, it is a lot of files")
+        check(r.returncode == 1 and "is in the code" in r.stdout, "check: a CHECK: whose place is a code file should be rejected")
+        r = chk("CHECK: Supply the retention schedule for logs · tried: searched docs/ and found no schedule")
+        check(r.returncode == 1 and "make it 'ASK:" in r.stdout, "check: a CHECK: that is really a question should be rejected")
+        r = chk("CHECK: Lovable Cloud → Database → age gate · ANSWER: adults only")
+        check(r.returncode == 1 and "already holds the user's answer" in r.stdout, "check: a CHECK: holding an answer should be rejected")
+        r = chk("CHECK: Lovable Cloud → Database → cron jobs for the email backstop · tried: `rg -i cron supabase/migrations/` found nothing; the job is made in the dashboard")
+        check(r.returncode == 1 and "DATABASE: yes" in r.stdout, "check: a database CHECK: needs the read-only access question asked")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nDATABASE: no\n")
+        r = chk("CHECK: Lovable Cloud → Database → cron jobs for the email backstop · tried: `rg -i cron supabase/migrations/` found nothing; the job is made in the dashboard")
+        check(r.returncode == 0, f"check: with 'DATABASE: no' a database CHECK: is allowed:\n{r.stdout[-300:]}")
+        r = chk("CHECK: Lovable Cloud → Database → Backups → a restore was tested · tried: `rg -i restore docs/` found no restore record")
+        check(r.returncode == 0, "check: backups are a dashboard item, not SQL")
+        r = run("coverage.py", str(out / "ledger.md"), "--check-list")
+        check(r.returncode == 0 and "### Lovable Cloud → Database → Backups (1 item" in r.stdout and f"**{cid_}**" in r.stdout,
+              f"check: --check-list should group items by place:\n{r.stdout[-300:]}")
+        id2_ = full[2].split("|")[1].strip()
+        rows_ = [full[0], f"| {cid_} | CAN'T TELL | CHECK: Lovable Cloud → Database → cron jobs for the email backstop · tried: `rg -i cron supabase/migrations/` found nothing; the job is made in the dashboard |",
+                 f"| {id2_} | PASS | SQL: select count(*) from pg_policies where tablename = 'invoices' → 4 rows |"] + full[3:] + inv_rows + hit_rows
+        r = run("coverage.py", str(ledger(out, rows_)))
+        check(r.returncode == 1 and "you have read-only database access" in r.stdout,
+              f"check: once a SQL: row shows database access, a database CHECK: must become SQL:\n{r.stdout[-300:]}")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nDATABASE: yes\n")
+        r = chk("CHECK: Lovable Cloud → Database → cron jobs for the email backstop · tried: `rg -i cron supabase/migrations/` found nothing; the job is made in the dashboard")
+        check(r.returncode == 1 and "SQL:" in r.stdout, "check: with database access allowed, a database CHECK: must become SQL: evidence")
         (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
         ledger(out, ok_rows)   # put the ledger back for the fix-plan tests below
 

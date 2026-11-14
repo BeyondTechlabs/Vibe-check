@@ -26,6 +26,7 @@ Usage:
     LEDGER       default .vibe-check/ledger.md (inventory.json and sweep.json are read from the same folder)
     --remaining  list what is left to check (use it to resume a long run)
     --save       after a complete count, keep this run in .vibe-check/history/ so the next run can compare
+    --check-list print the check-yourself items grouped by place (one visit per place), for the report
   Every count also writes .vibe-check/results.json (score, band, totals, areas, every check's status).
 Exit code 0 = complete, 1 = gaps found. Python 3.8+, standard library only.
 """
@@ -48,7 +49,7 @@ SOURCE = re.compile(r"https?://|\b(?:npm audit|pnpm audit|yarn npm audit|compose
                     r"cargo audit|osv-scanner|trivy|docker scout|dependency-check|dotnet list package|wpscan|wp plugin list)\b", re.I)
 CHECKABLE = re.compile(r"\w\.\w|/|`|:\d|https?:|\b(?:dashboard|config|setting|header|inventory|sweep|"
                        r"user confirmed|command|grep|npm|pnpm|yarn|pip|curl|git|gh|lighthouse|axe|playwright|policy|"
-                       r"migration|env|DNS|SPF|DKIM|DMARC|CLI)\b", re.I)
+                       r"migration|env|DNS|SPF|DKIM|DMARC|CLI|SQL|screenshot)\b", re.I)
 ID_RX = re.compile(r"^([A-Z0-9]+)-(\d{2,3})$")
 
 # ---- score, bands and areas (v3.5). The score is counted here, never written by the AI. ----
@@ -130,6 +131,60 @@ def downgraded(cid, results):
     return "outside the eu" in blob or "no eu users" in blob
 
 
+ARROW = re.compile(r"\s*(?:→|->)\s*")
+CODE_PLACE = re.compile(r"[\w/.-]+\.(?:tsx?|jsx?|mjs|py|sql|json|md|rb|go|php|vue|svelte|toml|ya?ml|html|css)\b|:\d+\b", re.I)
+QUESTION_START = re.compile(r"^\s*(?:supply|provide|share|send|do you|does (?:your|the)|is there|are there|have you|has the)\b", re.I)
+DB_PLACE = re.compile(r"\b(?:database|tables?|sql|pg_\w+|rls|row.level|polic(?:y|ies)|cron|grants?|views?|schema|triggers?|functions? in the database)\b", re.I)
+CONCRETE = re.compile(r"`[^`]+`|[\w.-]+/[\w./*-]*|\w\.\w{2,4}\b|\b(?:rg|grep|SQL|select|find)\b|\"[^\"]{2,}\"|'[^']{2,}'", re.I)
+NOT_SQL = re.compile(r"\b(?:backups?|pitr|point.in.time|restore|snapshots?)\b", re.I)
+
+
+def check_parts(ev):
+    """'CHECK: <place> → <what to look at> · tried: <what you searched first>' -> (place, what, tried)."""
+    body = re.sub(r"^\s*CHECK\s*:\s*", "", ev, flags=re.I)
+    m = re.search(r"[·;,]?\s*\btried\s*:\s*", body, re.I)
+    head, tried = (body[:m.start()], body[m.end():]) if m else (body, "")
+    parts = [x.strip(" ·;") for x in ARROW.split(head) if x.strip(" ·;")]
+    place = " → ".join(parts[:-1]) if len(parts) > 1 else ""
+    return place, (parts[-1] if parts else ""), tried.strip()
+
+
+def check_problems(key, ev, have_sql, db_answer):
+    """Why a CHECK: row isn't a real 'only you can look' item (empty list = fine)."""
+    place, what, tried = check_parts(ev)
+    out = []
+    if re.search(r"\bANSWER\s*:", ev, re.I):
+        return [f"{key}: this CHECK: already holds the user's answer: settle it (PASS with 'ANSWER: … · code: …', or FAIL)"]
+    if QUESTION_START.search(place or what) or QUESTION_START.search(what):
+        return [f"{key}: this is a question the user can answer from memory: make it 'ASK: <question>' and ask it as a choice"]
+    if not place:
+        out.append(f"{key}: write CHECK: as '<where, outside the code> → <what to look at> · tried: <what you searched first>'")
+    elif CODE_PLACE.search(place):
+        out.append(f"{key}: '{place[:40]}' is in the code: read it and decide (PASS/FAIL); CHECK: is only for places outside the code")
+    if len(tried) < 15 or not CONCRETE.search(tried):
+        out.append(f"{key}: say what you tried first, concretely: '· tried: `rg -i captcha src/` found nothing; it's set in the "
+                   f"dashboard' (name the command, file, folder, query or search term)")
+    if place and DB_PLACE.search(place + " " + what) and not NOT_SQL.search(place + " " + what):
+        if have_sql:
+            out.append(f"{key}: you have read-only database access: settle it with 'SQL: <query> → <result>' instead of CHECK:")
+        elif db_answer is None:
+            out.append(f"{key}: this is in the database: ask once 'May I read your database, read-only?' and write "
+                       f"'DATABASE: yes' or 'DATABASE: no' in .vibe-check/answers.md")
+        elif db_answer == "yes":
+            out.append(f"{key}: the user allowed read-only database access: settle it with 'SQL: <query> → <result>'")
+    return out
+
+
+def check_groups(required, results, checks):
+    """CHECK: items grouped by place, for one visit per place."""
+    groups = {}
+    for c in required:
+        if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check":
+            place, what, _ = check_parts(results[c][1])
+            groups.setdefault(place or "Other", []).append((c, what))
+    return groups
+
+
 def ask_kind(cid, results):
     """CAN'T TELL rows are either a question the user can answer (ASK:) or something only they can check (CHECK:)."""
     ev = results.get(cid, ("", "", ""))[1].strip().lower()
@@ -206,7 +261,8 @@ def compute_result(required, results, checks, level, date):
                    "need_answer": counts["ASK"],
                    "on_your_word": sum(1 for c in required if status_of(c, results, checks) == "PASS" and is_on_word(results[c][1])), "not_done": counts["TODO"], "checked": applicable - counts["TODO"],
                    "questions": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask"),
-                   "check_yourself": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check")},
+                   "check_yourself": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check"),
+                   "check_places": len(check_groups(required, results, checks))},
         "areas": areas,
         "blockers": [{"id": c, "name": checks[c][2]} for c in required if status_of(c, results, checks) == "BLOCKER"],
         "checks": {c: status_of(c, results, checks) for c in required},
@@ -327,7 +383,7 @@ def print_result(res, diff):
     print(f"| ✅ Passed | {t['passed']}" + (f" ({ow} on your answer alone, not proven by the code)" if ow else "") + " |")
     print(f"| ❌ Must fix (blockers) | {t['blockers']} |")
     print(f"| ⚠️ Should fix | {t['should_fix']} |")
-    print(f"| ❓ Need your answer | {t['need_answer']} ({t['questions']} questions · {t['check_yourself']} to check yourself) |")
+    print(f"| ❓ Need your answer | {t['need_answer']} ({t['questions']} questions · {t['check_yourself']} to check yourself in {t.get('check_places', 0)} place{'' if t.get('check_places', 0) == 1 else 's'}) |")
     if t["not_done"]:
         print(f"| ❗ Not checked yet | {t['not_done']} |")
     tail = "✅ nothing skipped" if not t["not_done"] else f"❗ {t['not_done']} not checked"
@@ -527,6 +583,7 @@ def main() -> int:
     want_sample = "--sample" in argv
     want_fix_plan = "--fix-plan" in argv
     want_save = "--save" in argv
+    want_check_list = "--check-list" in argv
     report_path = None
     if "--verify-report" in argv:
         i = argv.index("--verify-report"); report_path = Path(argv[i + 1]); del argv[i:i + 2]
@@ -686,6 +743,19 @@ def main() -> int:
                 elif verdict.startswith("OVERTURNED") and results[c][0] == "PASS":
                     errors.append(f"{rk}: {c} was overturned by the re-check but is still PASS: change its result")
 
+    if want_check_list:
+        groups = check_groups(required, results, checks)
+        total = sum(len(v) for v in groups.values())
+        print(f"## 🖥️ Check these yourself\n\n{total} items in {len(groups)} places: open each place once, tick what's true, "
+              "or paste a screenshot and I'll read it.\n")
+        for place, items in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            mins = max(2, round(len(items) * 0.5 + 1))
+            print(f"### {place} ({len(items)} item{'s' if len(items) != 1 else ''}, about {mins} min)\n")
+            for c, what in items:
+                print(f"- [ ] **{c}** {checks[c][2]}: {what}")
+            print()
+        return 0
+
     if want_fix_plan:
         plan = ledger_path.parent / "fix-plan.md"
         old = {}
@@ -727,6 +797,14 @@ def main() -> int:
         must = json.loads(prof_path.read_text("utf-8")).get("modules_with_evidence", {})
     else:
         must = {}
+    # v3.6.11: CHECK: only for places outside the code and database, after trying them first
+    have_sql = any(re.search(r"\bSQL\s*:", v[1]) for v in results.values())
+    dbm = re.search(r"^\s*[-*]?\s*DATABASE\s*:\s*(\w+)", ans_text, re.M | re.I)
+    db_answer = dbm.group(1).lower() if dbm else None
+    db_answer = "yes" if db_answer in ("yes", "y", "allowed") else ("no" if db_answer else None)
+    for c, v in results.items():
+        if v[0] == "CAN'T TELL" and ask_kind(c, results) == "check":
+            errors.extend(check_problems(c, v[1], have_sql, db_answer))
     # v3.6.7: an answer that adds to the profile (students, payments, health…) makes that module required too
     for a, why in adds.items():
         if a != "eu-users":
@@ -1001,6 +1079,11 @@ def main() -> int:
             if unasked:
                 errors.append(f"REPORT: {len(unasked)} question(s) weren't asked ({', '.join(unasked[:6])}…): ask them as choices before the "
                               "report and record each answer, or that the user skipped it, in .vibe-check/answers.md")
+            # check-yourself items: all listed in the report, grouped by place
+            missing_chk = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check" and c not in rep_text]
+            if missing_chk:
+                errors.append(f"REPORT: {len(missing_chk)} check-yourself item(s) aren't in the report ({', '.join(missing_chk[:6])}…): "
+                              "paste the list from 'coverage.py --check-list' into '🖥️ Check these yourself'")
             # blockers: one heading per real problem, each with a prompt (or steps only the user can do)
             sec = re.search(r"^##[^\n]*Blockers[^\n]*\n(.*?)(?=^## )", rep_text, re.M | re.S)
             heads = re.findall(r"^#{3,4}\s*\d+\.", sec.group(1), re.M) if sec else []

@@ -158,7 +158,7 @@ Then write down:
 
 ## Step 4: Run the modules (one at a time, into the ledger)
 
-**Read the **ledger** section below now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (only the user can look). Profile modules the profile rules out are never opened: one `N/A` row each.
+**Read the **ledger** section below now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (last resort: after the code, the database read-only, and a question). Profile modules the profile rules out are never opened: one `N/A` row each.
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, and write its rows to the ledger immediately. On a big app, resume with `python3 <skill-folder>/scripts/coverage.py --remaining` instead of getting shallower.
 - **Evidence is checked against the files:** `coverage.py` re-opens every cited `file:line` and every quoted line of code. Re-read before you quote.
@@ -300,7 +300,7 @@ Date: YYYY-MM-DD
 | SEC-001 | PASS | src/lib/auth.ts:4 uses Clerk; no custom password code (grep "bcrypt\|jwt.sign": 0 hits) |
 | SEC-030 | FAIL 🔎 Likely | app/notes/[id]/page.tsx:41 renders note.body with dangerouslySetInnerHTML |
 | SEC-047 | CAN'T TELL | ASK: invite codes come from an external service. Are they single-use and do they expire? |
-| OPS-031 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication: is 2FA on? |
+| OPS-031 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication → 2FA is on for every admin · tried: `rg -i "2fa|mfa" .github/ docs/` found nothing; it's an account setting |
 | PLT-011..PLT-015 | N/A | not on Firebase |
 | HLT-* | N/A | no health, medical or fitness data |
 | INV-api_routes | 47/47 | every route traced to its auth check |
@@ -311,7 +311,15 @@ Date: YYYY-MM-DD
 ```
 
 - **Results:** `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL`. Every row needs its own evidence or reason. Copy-pasted evidence is rejected.
-- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look (a dashboard setting, a browser run), followed by exactly where to look. `ASK:` items are asked before the report (see the **reporting** section); `CHECK:` items become the *Check these yourself* list.
+- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look. `ASK:` items are asked before the report (see the **reporting** section); `CHECK:` items become the *Check these yourself* list.
+- **Settle it yourself first; `CHECK:` is the last resort.** Before writing either, work through this order, and stop at the first that settles it:
+  1. **The code:** search and read it (`rg`, the files, the migrations, the config). If the code shows it, it's PASS or FAIL. "It's a lot of files" is never a reason for `CHECK:`.
+  2. **The database, read-only:** policies, grants, functions, views, cron jobs, tables (audit logs, roles), storage buckets. With access, write `SQL: <query> → <result>` as evidence. Without it, ask once, as a choice: *"May I read your database, read-only? It settles N checks."* and write `DATABASE: yes` or `DATABASE: no` in `.vibe-check/answers.md`. Backups and restores are dashboard items, not SQL.
+  3. **A question:** anything the user knows from memory (do you have a written plan, a policy, a contract, a process; who does X) is `ASK:` and is asked as a choice, never `CHECK:`.
+  4. **Only then `CHECK:`,** for a place outside the code and database that only the user can open, written exactly as `CHECK: <place> → <what to look at> · tried: <the concrete search you ran first>`, for example `CHECK: Lovable Cloud → Users → Auth settings → CAPTCHA is on · tried: \`rg -i captcha src/ supabase/\` found nothing`. The running app counts as a place (`CHECK: the running app → …`) when live tests weren't allowed.
+  
+  `coverage.py` rejects a `CHECK:` with no place, a code file as the place, no concrete `tried:`, a question in disguise, an answer already inside it, or a database item when you have (or could ask for) read-only access. `coverage.py --check-list` prints the items grouped by place for the report.
+- **A screenshot settles a `CHECK:`.** When the user pastes one, read it and write `PASS` or `FAIL` with `screenshot: <what it shows>, pasted <date>`.
 - **A pass that rests on the user's answer is written as one:** `| SEC-047 | PASS | ANSWER: single-use, expire in 7 days · code: codes come from an outside service, nothing here decides it |`. The `code:` part says what you looked at first and why the code can't settle it. The report shows it as **✅ per your answer**, and the totals count it apart. A pass with "user confirmed" and no `ANSWER:` is rejected. If the code can settle it, the code decides, never the answer.
 - **An answer that adds to the profile gets an `ADDS:` line in `.vibe-check/answers.md`:** `ADDS: kids-education · Q2: students use it`, `ADDS: fintech`, `ADDS: health`, `ADDS: eu-users`. That module then can't stay `N/A`: check its items before the report. `eu-users` keeps EU-only blockers (LAW-001) as blockers.
 - **Evidence that's easy to verify:** cite `path:line` (a shortened path is fine when it matches only one file) and quote code as it appears. When `coverage.py` rejects a row it says why and shows the closest real line: correct that row once and move on. Don't rewrite rows that passed. **This is tidying the audit notes, never "fixing"**: that word is only for changing the user's code after they approve.
@@ -369,10 +377,10 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 | SEC-015 | FAIL 🔬 Confirmed | app/api/invoices/[id]/route.ts:12 `findUnique({ where: { id } })` has no owner filter; middleware.ts only checks login |
 | SEC-016 | PASS | lib/roles.ts:3 roles defined once; app/api/admin/route.ts:5 checks `requireRole("admin")` |
 | SEC-074 | N/A | no GraphQL in the project (inventory: 0 GraphQL endpoints) |
-| SEC-010 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication: is 2FA on for admins? |
+| SEC-010 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication → 2FA is on for admins · tried: `rg -i "2fa|mfa" .` found nothing; it's an account setting |
 ```
 
-Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` (starting `ASK:` for a question the user can answer, or `CHECK:` for something only they can look at). Ranges and `*` only for N/A. Each row needs its own evidence. Never change a project file: an audit only reads.
+Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` (starting `ASK:` for a question the user can answer, or `CHECK:` for a place outside the code and database only they can open). **Settle it yourself first:** read the code, then the database read-only (`SQL: <query> → <result>`), then make it a question; `CHECK:` is the last resort and needs `<place> → <what> · tried: <the concrete search you ran>` (see the **ledger** section). Ranges and `*` only for N/A. Each row needs its own evidence. Never change a project file: an audit only reads.
 
 ### You return
 Post one line when you start and one when you finish (`✅ security · 83 checks · 2 blockers`). Return only a short summary to the main agent: the module, how many checks, and the counts of PASS, FAIL, N/A and CAN'T TELL, plus the IDs of any 🔴 FAIL. The details are in your ledger file.
@@ -1564,6 +1572,10 @@ Load this file when the app supports more than one language or region, sells to 
 
 Load this file when the app can run locally or the user has a **staging or preview URL**, at the Full and Enterprise levels. Reading code shows what *should* happen; these tests show what *does* happen when someone actually tries. Each test is quick, safe and repeatable.
 
+### When preview and production share one database
+
+Many app builders (Lovable, Bolt, Replit) point the preview at the same database as the live app, so live tests there would touch real users. Don't skip the whole area silently: offer, as a choice, a **separate test copy** with its own database (duplicate or remix the project, or a database branch where the platform has one), with payments in test mode. If the user says no, the running-app items stay `CHECK: the running app → …`.
+
 ### The rules for live tests
 - **Only with the user's OK, and never against production.** Ask once, as a choice, with the cost: *"Run the app locally and test it with two test accounts? Adds about 10–20 minutes. Nothing touches production."* · *Yes (Recommended)* · *Skip live tests*. Run it with a time limit (stop it when the tests end, and after 20 minutes at most). Without a yes, mark the tests `CAN'T TELL` with the exact command for the user. Production stays **read-only** (ground rule 6): GET and HEAD requests only.
 - **Production data stays closed.** Never open, export or query a copy of production data (a database export, a backup, a `.wrangler` or `.sqlite` copy) without asking first, as a choice. If one is already in the project, report it (who could read it, should it be there?) and don't read it.
@@ -1598,6 +1610,8 @@ When every module is checked, collect the `CAN'T TELL` rows that start with `ASK
 1. **Code before trust.** Look at the code the answer is about. If the code settles it, the code decides: PASS or FAIL with that evidence. When the code contradicts the answer, FAIL, and the finding says *"You said X; `file:line` shows Y"*. Only when the code can't decide does the answer settle it: `PASS` with `ANSWER: … · code: …` (shown as ✅ per your answer), `FAIL`, or a `CHECK:` row when the user should look.
 2. **Follow-up checks.** If an answer adds to the profile (students or children, payments, health or financial data, users posting or chatting, other languages, AI features, EU users…), write `ADDS: <module>` in `.vibe-check/answers.md`, tell the user what it adds (*"Students use it: that adds 38 checks for student data, about 10 minutes"*) and check that module before the report. Any new `ASK:` items it raises are asked in one more round.
 3. Re-run `coverage.py` and say what moved.
+
+**Before the questions, shrink the check-yourself list.** Every `CHECK:` row must survive the order in the **ledger** section (code, then the database read-only, then a question). If any are about the database and you have no access yet, the database question goes in the first round. After the questions, offer the grouped list from `coverage.py --check-list` as one choice: *Go through them now, one place at a time (Recommended)* · *Put them in the report*. Going through them, for each place say what to open and what to look for; the user answers for the whole group, ticks items, or pastes a screenshot, and each item becomes PASS or FAIL.
 
  `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
 
@@ -1752,10 +1766,13 @@ Only the `ASK:` questions the user skipped (the rest were asked before this repo
 
 ### 🖥️ Check these yourself
 
-The `CHECK:` items: settings and runs only the user can see. One line each, with exactly where to look; say "done" or the answer, and the score updates.
+*(Paste the list from `coverage.py --check-list`: grouped by place, so the user opens each place once. Never type it by hand.)*
 
-- [ ] <Example: Cloudflare → My Profile → Authentication: turn on 2FA (OPS-031)>
-- [ ] <Example: open the app on a phone at 375px wide: do the forms fit? (UX-006)>
+<N> items in <P> places: open each place once, tick what's true, or paste a screenshot and I'll read it.
+
+#### <Example: Cloudflare → My Profile → Authentication (1 item, about 2 min)>
+
+- [ ] <Example: **OPS-031** MFA on every account: 2FA is on for every admin>
 
 ### ⚖️ Needs a lawyer
 
@@ -1897,7 +1914,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.10 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -1912,7 +1929,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.10 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2055,7 +2072,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
 - [ ] `report_pdf.py` made the PDF, and both the `.md` and the `.pdf` were handed over as downloadable files (or with full paths and an open command), not just saved.
-- [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*. Each answer was checked against the code first; passes that rest on an answer alone are `ANSWER: … · code: …`, and every answer that added to the profile has an `ADDS:` line and its module was checked.
+- [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*, pasted from `coverage.py --check-list`. Every `CHECK:` was tried in the code and the database first (`tried:` names the search), questions in disguise were asked as questions, and the database question was asked if any item needed it. Each answer was checked against the code first; passes that rest on an answer alone are `ANSWER: … · code: …`, and every answer that added to the profile has an `ADDS:` line and its module was checked.
 - [ ] The report has the *📚 Every check, with what was found* appendix written by `coverage.py` (not by hand), and the score card says `N blockers (M checks)`.
 - [ ] No project file changed during the audit (the fingerprint guard passed), and "fix" was used only for approved code changes.
 - [ ] Running the app, opening copies of production data and any password check were asked first, and no real user's password was tested.

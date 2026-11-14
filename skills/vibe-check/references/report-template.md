@@ -101,10 +101,13 @@ Only the `ASK:` questions the user skipped (the rest were asked before this repo
 
 ## 🖥️ Check these yourself
 
-The `CHECK:` items: settings and runs only the user can see. One line each, with exactly where to look; say "done" or the answer, and the score updates.
+*(Paste the list from `coverage.py --check-list`: grouped by place, so the user opens each place once. Never type it by hand.)*
 
-- [ ] <Example: Cloudflare → My Profile → Authentication: turn on 2FA (OPS-031)>
-- [ ] <Example: open the app on a phone at 375px wide: do the forms fit? (UX-006)>
+<N> items in <P> places: open each place once, tick what's true, or paste a screenshot and I'll read it.
+
+### <Example: Cloudflare → My Profile → Authentication (1 item, about 2 min)>
+
+- [ ] <Example: **OPS-031** MFA on every account: 2FA is on for every admin>
 
 ## ⚖️ Needs a lawyer
 
@@ -246,7 +249,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.10 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -261,7 +264,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.10 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
