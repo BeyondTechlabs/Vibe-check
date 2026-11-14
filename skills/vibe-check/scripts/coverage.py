@@ -32,6 +32,7 @@ Exit code 0 = complete, 1 = gaps found. Python 3.8+, standard library only.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -94,6 +95,23 @@ def bar(score: int) -> str:
     return "█" * n + "░" * (10 - n)
 
 
+EU_ONLY = set()   # 🔴 checks that block only for EU/EEA users: marked *(blocker for EU users)* in the checklist
+
+
+def downgraded(cid, results):
+    """A FAIL on an EU-only blocker, recorded as 'outside the EU', counts as should-fix."""
+    if cid not in EU_ONLY or cid not in results:
+        return False
+    blob = (results[cid][1] + " " + results[cid][2]).lower()
+    return "outside the eu" in blob or "no eu users" in blob
+
+
+def ask_kind(cid, results):
+    """CAN'T TELL rows are either a question the user can answer (ASK:) or something only they can check (CHECK:)."""
+    ev = results.get(cid, ("", "", ""))[1].strip().lower()
+    return "check" if ev.startswith("check:") else "ask"
+
+
 def status_of(cid, results, checks):
     """One of PASS, BLOCKER, SHOULD, ASK, NA, TODO for a check."""
     if cid not in results:
@@ -105,7 +123,9 @@ def status_of(cid, results, checks):
         return "NA"
     if r == "CAN'T TELL":
         return "ASK"
-    return "BLOCKER" if checks[cid][1] == "🔴" else "SHOULD"
+    if checks[cid][1] == "🔴" and not downgraded(cid, results):
+        return "BLOCKER"
+    return "SHOULD"
 
 
 def score_of(ids, results, checks):
@@ -114,7 +134,7 @@ def score_of(ids, results, checks):
         st = status_of(c, results, checks)
         if st == "NA":
             continue
-        w = WEIGHT[checks[c][1]]
+        w = WEIGHT["🟡" if downgraded(c, results) else checks[c][1]]
         total += w
         if st == "PASS":
             earned += w
@@ -159,7 +179,9 @@ def compute_result(required, results, checks, level, date):
         "score": score, "raw_score": raw, "capped": capped, "band": band_of(score),
         "totals": {"in_vibe_check": len(checks), "at_this_level": len(required), "dont_apply": counts["NA"],
                    "apply": applicable, "passed": counts["PASS"], "blockers": counts["BLOCKER"], "should_fix": counts["SHOULD"],
-                   "need_answer": counts["ASK"], "not_done": counts["TODO"], "checked": applicable - counts["TODO"]},
+                   "need_answer": counts["ASK"], "not_done": counts["TODO"], "checked": applicable - counts["TODO"],
+                   "questions": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask"),
+                   "check_yourself": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check")},
         "areas": areas,
         "blockers": [{"id": c, "name": checks[c][2]} for c in required if status_of(c, results, checks) == "BLOCKER"],
         "checks": {c: status_of(c, results, checks) for c in required},
@@ -191,6 +213,72 @@ def compare_with_history(res, hist_dir: Path):
             "band_before": prev.get("band"), "fixed": fixed, "new": new, "came_back": came_back, "answered": answered}
 
 
+APPX_OPEN = "<!-- every-check: written by coverage.py from the ledger; don't edit by hand -->"
+APPX_CLOSE = "<!-- /every-check -->"
+LABEL = {"PASS": "✅", "BLOCKER": "❌", "SHOULD": "⚠️", "ASK": "❓", "NA": "➖", "TODO": "❗"}
+
+
+def build_appendix(required, results, checks):
+    """Every check with what was found, grouped by area, written by the script (costs no AI work)."""
+    def cell(s):
+        return re.sub(r"\s+", " ", s.replace("|", "/")).strip()[:220]
+    out = [APPX_OPEN, "## 📚 Every check, with what was found", "",
+           "Each row is copied from the ledger. ✅ rows show the evidence that it passed; ➖ rows say why it doesn't apply.", ""]
+    for name, mods in AREAS:
+        ids = [c for c in required if checks[c][0] in mods]
+        if not ids:
+            continue
+        sts = {c: status_of(c, results, checks) for c in ids}
+        if all(s == "NA" for s in sts.values()):
+            reasons = sorted({cell(results[c][1]) for c in ids if c in results})[:2]
+            out.append(f"**{name}** · ➖ doesn't apply ({len(ids)} checks): {'; '.join(reasons)}")
+            out.append("")
+            continue
+        n_pass = sum(1 for s in sts.values() if s == "PASS")
+        out += [f"### {name} · ✅ {n_pass} passed of {sum(1 for s in sts.values() if s != 'NA')}", "",
+                "| | Check | What was found |", "|---|---|---|"]
+        for want in ("BLOCKER", "SHOULD", "ASK", "TODO", "PASS", "NA"):
+            for c in ids:
+                if sts[c] == want:
+                    ev = results[c][1] if c in results else "not checked yet"
+                    out.append(f"| {LABEL[want]} | {c} {cell(checks[c][2])} | {cell(ev)} |")
+        out.append("")
+    out.append(APPX_CLOSE)
+    return "\n".join(out)
+
+
+def write_appendix(report_path: Path, block: str):
+    """Put the appendix into the report (replacing an older one), just before the score card if there is one."""
+    rep = report_path.read_text("utf-8")
+    if APPX_OPEN in rep and APPX_CLOSE in rep:
+        a = rep.index(APPX_OPEN); b = rep.index(APPX_CLOSE) + len(APPX_CLOSE)
+        rep = rep[:a] + block + rep[b:]
+    else:
+        m = re.search(r"^#+\s*🏁", rep, re.M)
+        rep = (rep[:m.start()] + block + "\n\n" + rep[m.start():]) if m else (rep.rstrip() + "\n\n" + block + "\n")
+    report_path.write_text(rep, "utf-8")
+
+
+FP_NAME = "fingerprint.json"   # written by profile.py at the start of the audit
+
+
+def changed_since_fingerprint(root: Path, vc_dir: Path):
+    """Project files (outside .vibe-check/) added, removed or changed since profile.py took the fingerprint."""
+    fp = vc_dir / FP_NAME
+    if not fp.exists():
+        return None
+    try:
+        old = json.loads(fp.read_text("utf-8")).get("files", {})
+    except ValueError:
+        return None
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_vc_profile", Path(__file__).resolve().parent / "profile.py")
+    pr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pr)  # type: ignore[union-attr]
+    now = pr.fingerprint(root)
+    return sorted(k for k in set(old) | set(now) if old.get(k) != now.get(k))
+
+
 def print_result(res, diff):
     t = res["totals"]
     cap = f" (capped: {t['blockers']} blocker{'s' if t['blockers'] != 1 else ''} open)" if res["capped"] else ""
@@ -212,7 +300,7 @@ def print_result(res, diff):
     print(f"| ✅ Passed | {t['passed']} |")
     print(f"| ❌ Must fix (blockers) | {t['blockers']} |")
     print(f"| ⚠️ Should fix | {t['should_fix']} |")
-    print(f"| ❓ Need your answer | {t['need_answer']} |")
+    print(f"| ❓ Need your answer | {t['need_answer']} ({t['questions']} questions · {t['check_yourself']} to check yourself) |")
     if t["not_done"]:
         print(f"| ❗ Not checked yet | {t['not_done']} |")
     tail = "✅ nothing skipped" if not t["not_done"] else f"❗ {t['not_done']} not checked"
@@ -244,6 +332,8 @@ def load_checklist():
             continue
         modules.append(f.stem)
         for sev, cid, rest in items:
+            if "*(blocker for EU users)*" in rest:
+                EU_ONLY.add(cid)
             nm = re.match(r"\*\*(.+?)\*\*", rest)
             checks[cid] = (f.stem, sev, (nm.group(1) if nm else rest[:70]).rstrip(".:,"))
             prefixes[cid.split("-")[0]] = f.stem
@@ -267,15 +357,54 @@ def _read(path: Path):
     return _file_cache[path]
 
 
+_index = {}
+
+
+def project_files(root: Path):
+    """Every file in the project (same skips as the scripts), for resolving shortened paths."""
+    if root not in _index:
+        skip = {"node_modules", ".git", ".next", ".nuxt", ".svelte-kit", ".output", "dist", "build", "out", "coverage",
+                ".vibe-check", "vendor", ".venv", "venv", "__pycache__", ".turbo", ".vercel", ".netlify", ".expo", "Pods",
+                "target", ".gradle", ".idea", ".cache", ".wrangler"}
+        files = []
+        for dp, dn, fn in os.walk(root):
+            dn[:] = [d for d in dn if d not in skip]
+            files += [(Path(dp) / f).relative_to(root).as_posix() for f in fn]
+        _index[root] = files
+    return _index[root]
+
+
+def resolve_cited(root: Path, rel: str):
+    """A cited path as written, or the one project file it uniquely shortens (routes.ts:12 → server/routes.ts)."""
+    path = (root / rel).resolve()
+    if _read(path) is not None:
+        return path, None
+    matches = [f for f in project_files(root) if f == rel or f.endswith("/" + rel.lstrip("./"))]
+    if len(matches) == 1:
+        return (root / matches[0]).resolve(), None
+    if len(matches) > 1:
+        return None, f"{rel} matches {len(matches)} files ({', '.join(matches[:3])}…): write the full path"
+    return None, f"{rel} doesn't exist in the project"
+
+
+def closest_line(texts, quote):
+    import difflib
+    lines = [ln.strip() for t in texts for ln in t.splitlines() if len(ln.strip()) > 6]
+    best = difflib.get_close_matches(quote.strip(), lines, n=1, cutoff=0.5)
+    return best[0][:90] if best else None
+
+
 def check_evidence(key: str, ev: str, root: Path):
-    """Problems with the evidence: cited files or lines that don't exist, quoted code that isn't in the cited files."""
+    """Problems with the evidence: cited files or lines that don't exist, quoted code that isn't in the cited files.
+    Forgiving where it's harmless (a shortened path that matches one file, spacing and quote style in code) and
+    specific where it isn't, so a ledger can be corrected in one pass instead of a rewrite loop."""
     problems, cited = [], []
     for m in REF_RX.finditer(ev):
         rel, line = m.group(1), int(m.group(2))
-        path = (root / rel).resolve()
-        text = _read(path)
+        path, why = resolve_cited(root, rel)
+        text = _read(path) if path else None
         if text is None:
-            problems.append(f"{key}: evidence cites {rel}:{line}, but {rel} doesn't exist in the project")
+            problems.append(f"{key}: evidence cites {rel}:{line}, but {why}")
             continue
         n_lines = text.count("\n") + 1
         if line < 1 or line > n_lines + 1:
@@ -283,16 +412,21 @@ def check_evidence(key: str, ev: str, root: Path):
             continue
         cited.append(text)
     if cited:
-        norm_files = [re.sub(r"\s+", " ", t) for t in cited]
+        def _n(s):
+            return re.sub(r"\s+", " ", s.replace('"', "'").replace("`", "'")).strip().rstrip(";,")
+        norm_files = [_n(t) for t in cited]
         for span in re.findall(r"`([^`]{8,200})`", ev):
             s = span.strip()
             if "…" in s or "..." in s or s.split(" ")[0] in CMD_WORDS or " --" in s or REF_RX.fullmatch(s):
                 continue
             if not re.search(r"[(){}\[\]=<>;.'\"/]|[a-z][A-Z]", s):
                 continue
-            ns = re.sub(r"\s+", " ", s)
+            ns = _n(s)
             if not any(ns in f for f in norm_files):
-                problems.append(f"{key}: quoted code `{s[:50]}` isn't in the cited file(s): re-read the file and quote it exactly")
+                near = closest_line(cited, s)
+                problems.append(f"{key}: quoted code `{s[:50]}` isn't in the cited file(s)"
+                                + (f"; the closest line there is `{near}`: quote that, or cite the right file" if near
+                                   else ": re-read the file and quote it exactly"))
     return problems
 
 
@@ -446,6 +580,9 @@ def main() -> int:
             errors.append(f"{key}: core module '{checks[ids[0]][0]}' can't be N/A as a whole; mark sections or items")
         if not ev or ev.lower().strip(" .") in LAZY or len(ev) < 8:
             errors.append(f"{key}: {r} needs real evidence or a reason (got '{ev or 'nothing'}')")
+        if r == "CAN'T TELL" and not re.match(r"^\s*(ASK|CHECK)\s*:", ev, re.I):
+            errors.append(f"{key}: CAN'T TELL starts with ASK: (a question the user can answer) or CHECK: (something only they can "
+                          f"check, e.g. a dashboard setting), then the reason (got '{ev[:50]}')")
         if r in ("PASS", "FAIL"):
             evidence_problems += check_evidence(key, ev, root)
         if r in ("PASS", "FAIL") and not CHECKABLE.search(ev):
@@ -753,7 +890,12 @@ def main() -> int:
         print("\n## Standards (how this audit's checks came out for each item; not a certification)\n")
         print("| Standard | ✅ | ❌ | ◐ | ➖ | Items that failed |")
         print("|---|---|---|---|---|---|")
+        only_if = {"Mobile": (["mobile"], "no mobile app"), "LLM": (["ai-features", "ai-agents"], "no AI features")}
         for title, items in stds:
+            gate = next((v for k, v in only_if.items() if k in title), None)
+            if gate and all(status_of(c, results, checks) == "NA" for c in required if checks[c][0] in gate[0]):
+                print(f"| {title} | ➖ | ➖ | ➖ | ➖ | doesn't apply ({gate[1]}) |")
+                continue
             tally = {"ok": 0, "fail": 0, "part": 0, "na": 0}
             failed = []
             for iid, name, ids, human in items:
@@ -769,7 +911,7 @@ def main() -> int:
             print(f"| {title} | {tally['ok']} | {tally['fail']} | {tally['part']} | {tally['na']} | {', '.join(failed) or '-'} |")
         print("\n◐ = some mapped checks couldn't be confirmed, weren't done, or need a human specialist (see references/standards.md).")
     print(f"\nScore card: vibe-check: {res['verdict']} · Score {res['score']}/100 · {res['totals']['passed']}/{res['totals']['apply']} checks · "
-          f"{res['totals']['blockers']} blockers · {level.title()} check · {run_date or 'date'}")
+          f"<blocker headings in the report> blockers ({res['totals']['blockers']} checks) · {level.title()} check · {run_date or 'date'}")
 
     if report_path is not None:
         rep_text = report_path.read_text("utf-8") if report_path.exists() else ""
@@ -788,9 +930,9 @@ def main() -> int:
                 if got != real:
                     errors.append(f"REPORT: coverage row for {mod} says {got}, the ledger says {real}")
             T = res["totals"]
-            sc = re.search(r"vibe-check:\s*\S+[^·\n]*·\s*Score\s*(\d+)\s*/\s*100\s*·\s*(\d+)\s*/\s*(\d+)\s*checks\s*·\s*(\d+)\s*blockers", rep_text)
+            sc = re.search(r"vibe-check:\s*\S+[^·\n]*·\s*Score\s*(\d+)\s*/\s*100\s*·\s*(\d+)\s*/\s*(\d+)\s*checks\s*·\s*\d+\s*blockers?\s*\((\d+)\s*checks?\)", rep_text)
             if not sc:
-                errors.append("REPORT: no score card line ('vibe-check: … · Score N/100 · passed/applicable checks · N blockers')")
+                errors.append("REPORT: no score card line ('vibe-check: … · Score N/100 · passed/applicable checks · N blockers (M checks)')")
             elif [int(x) for x in sc.groups()] != [res["score"], T["passed"], T["apply"], T["blockers"]]:
                 errors.append(f"REPORT: the score card says Score {sc.group(1)}, {sc.group(2)}/{sc.group(3)} checks and {sc.group(4)} blockers; "
                               f"the ledger says Score {res['score']}, {T['passed']}/{T['apply']} and {T['blockers']}")
@@ -802,6 +944,42 @@ def main() -> int:
                 errors.append("REPORT: no totals table ('| **Checked** | **N of M** |' pasted from coverage.py)")
             elif [int(x) for x in ck.groups()] != [T["checked"], T["apply"]]:
                 errors.append(f"REPORT: totals say checked {ck.group(1)} of {ck.group(2)}; the ledger says {T['checked']} of {T['apply']}")
+            # every check with its evidence, written by the script into the report
+            write_appendix(report_path, build_appendix(required, results, checks))
+            rep_text = report_path.read_text("utf-8")
+            # questions: every ❓ the user can answer was asked (or they chose to skip), before the report
+            ans_path = ledger_path.parent / "answers.md"
+            ans_text = ans_path.read_text("utf-8") if ans_path.exists() else ""
+            unasked = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask" and c not in ans_text]
+            if unasked:
+                errors.append(f"REPORT: {len(unasked)} question(s) weren't asked ({', '.join(unasked[:6])}…): ask them as choices before the "
+                              "report and record each answer, or that the user skipped it, in .vibe-check/answers.md")
+            # blockers: one heading per real problem, each with a prompt (or steps only the user can do)
+            sec = re.search(r"^##[^\n]*Blockers[^\n]*\n(.*?)(?=^## )", rep_text, re.M | re.S)
+            heads = re.findall(r"^#{3,4}\s*\d+\.", sec.group(1), re.M) if sec else []
+            if T["blockers"] and not heads:
+                errors.append("REPORT: the Blockers section needs one '### 1. <title>' heading per real problem")
+            if sec and heads:
+                blocks = re.split(r"^#{3,4}\s*\d+\.", sec.group(1), flags=re.M)[1:]
+                missing_p = [str(i + 1) for i, b in enumerate(blocks) if "Prompt to fix it" not in b and "Steps for you" not in b]
+                if missing_p:
+                    errors.append(f"REPORT: blocker(s) {', '.join(missing_p)} have no 'Prompt to fix it' (or 'Steps for you' when only the user can fix it)")
+            pb = re.search(r"·\s*(\d+)\s*blockers?\s*\((\d+)\s*checks?\)", rep_text)
+            if T["blockers"] and not pb:
+                errors.append("REPORT: the score card must say '· N blockers (M checks) ·': N problems, M blocker checks")
+            elif pb and (int(pb.group(2)) != T["blockers"] or (heads and int(pb.group(1)) != len(heads))):
+                errors.append(f"REPORT: the score card says {pb.group(1)} blockers ({pb.group(2)} checks); the report has {len(heads)} blocker "
+                              f"headings and the ledger {T['blockers']} blocker checks")
+            # the audit never changes the user's code: compare with the fingerprint profile.py took at the start
+            changed = changed_since_fingerprint(root, ledger_path.parent)
+            if changed:
+                log = (ledger_path.parent / "fix-log.md")
+                logged = log.read_text("utf-8") if log.exists() else ""
+                unlogged = [f for f in changed if f not in logged]
+                if unlogged:
+                    errors.append(f"REPORT: {len(unlogged)} project file(s) changed since the audit started and aren't in an approved fix "
+                                  f"card in .vibe-check/fix-log.md: {', '.join(unlogged[:8])}. An audit never changes the user's code: "
+                                  "undo these changes and tell the user what happened")
             # secret guard: nothing that leaves the project may hold a full secret (same patterns as sweep.py)
             for _shared in [report_path, ledger_path.parent / "summary.md", ledger_path]:
                 for _line_no, _kind, _title in find_secrets(_shared):

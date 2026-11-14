@@ -48,10 +48,10 @@ It works like a senior team in one command, covering what security, QA, legal an
 | | |
 |---|---|
 | 🔍 **Audit** | **19 AI blind-spot checks** plus **600+ checks** in 26 modules. It asks a few questions about your app and runs only the modules that apply |
-| 📋 **Report** | A clear verdict (**🟢 SHIP / 🟡 SHIP AFTER FIXES / 🔴 DO NOT SHIP**), a **score out of 100** with a band (*Ready to scale · Ready to launch · Needs work · Not safe for real users yet*), a **totals table** (how many checks applied, passed, failed, and "checked 241 of 241") and a **scorecard per area**, all counted by a script, not written by the AI. Six symbols with one meaning each: ✅ passed · ❌ must fix · ⚠️ should fix · ❓ your answer · ➖ doesn't apply · 🔧 being fixed |
+| 📋 **Report** | A clear verdict (**🟢 SHIP / 🟡 SHIP AFTER FIXES / 🔴 DO NOT SHIP**), a **score out of 100** with a band (*Ready to scale · Ready to launch · Needs work · Not safe for real users yet*), a **totals table** (how many checks applied, passed, failed, and "checked 241 of 241") and a **scorecard per area**, all counted by a script, not written by the AI. It ends with **every check and the evidence for it, passes included** (the file and line, or the command), so you can see what was checked, not just what failed. Six symbols with one meaning each: ✅ passed · ❌ must fix · ⚠️ should fix · ❓ your answer · ➖ doesn't apply · 🔧 being fixed |
 | 🛠️ **Fixes** | A **fix plan** first (what it can fix safely, what needs your decision, what only you can do), then **one fix card per fix**: before, what changed, what was checked, how to undo. If a check fails after a change, **the change is undone automatically**. Fixes go on a new branch with one commit each (or checkpoints in Lovable, Replit and Bolt). Built on a playbook of 75 fix recipes: **every 🔴 check points to one** |
 | 💾 **History** | Every run is saved in `.vibe-check/` (kept out of git). The next run shows **what changed since last time**: fixed, new, and problems that **came back** after an AI tool undid a fix |
-| 🗳️ **Questions as choices** | Questions show as **tap-to-choose cards** in tools that have them (Claude Code, Cursor, Gemini CLI, VS Code Copilot…) and as quick numbered choices everywhere else. It never asks what your code already answers |
+| 🗳️ **Questions as choices** | Questions show as **tap-to-choose cards** in tools that have them (Claude Code, Cursor, Gemini CLI, VS Code Copilot…) and as quick numbered choices everywhere else. It never asks what your code already answers, and it **asks its questions before writing the report**, so your answers count in the score. Things only you can look at (like a dashboard setting) get their own *Check these yourself* list |
 | 🧑‍💻 **For everyone** | Written for non-developers too. Every finding comes with a **copy-paste prompt** you can give any AI tool to fix it |
 
 ## 🛡️ It won't change what you built
@@ -66,7 +66,7 @@ vibe-check fixes **only the issues it finds**. Your product stays your product:
 - **Your data is safe.** It never deletes or rewrites existing user data, and database changes are tested on staging first.
 - **Easy to review.** After each fix, it lists the files changed and what users will (or won't) notice.
 
-It also **never changes code during the audit**, **never marks something as passed without evidence**, and **never prints your secrets in full**.
+It also **never changes code during the audit** (it fingerprints your project at the start, and the report is refused if anything changed), **asks before running your app or opening any copy of production data**, **never tests real users' passwords**, **never marks something as passed without evidence**, and **never prints your secrets in full**.
 
 ### 🎯 Built not to make things up
 - **Quote the proof:** every problem includes the exact code lines (re-read just before reporting) or the exact command output. No quote, no finding.

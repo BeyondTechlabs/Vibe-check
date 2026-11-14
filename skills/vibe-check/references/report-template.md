@@ -21,9 +21,9 @@ Use this structure. Keep it skimmable. Plain words first, technical details seco
 ````markdown
 # vibe-check report: <app name>
 
-> ⬆️ **A newer vibe-check is out** (v<latest>; this check ran on v<installed>). <update step for this tool, from SKILL.md Step 0>, then start a new session. *(Only if Step 0 found a newer version.)*
+> ⬆️ **A newer vibe-check is out** (v<latest>; this check ran on v<installed>). <the `HOW:` line from version_check.py>, then start a new session. *(Only if Step 0 found a newer version.)*
 
-> **Update check:** couldn't connect here. Latest release: https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · <update step for this tool>. *(Only if Step 0 couldn't connect; leave out if up to date or turned off.)*
+> **Update check:** couldn't connect here. Latest release: https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · <the `HOW:` line from version_check.py>. *(Only if Step 0 couldn't connect; leave out if up to date or turned off.)*
 
 **vibe-check:** v<installed> · **Skill files:** complete | checklists read from GitHub, scripts done by hand · **Date:** <date> · **Level:** Quick | Full | Enterprise · **Profile:** <users, minors?, payments?, sensitive data?, regions> · **Stack:** <framework, DB, auth, hosting, payments, AI>
 **Modules run:** <list> · **Method notes:** <e.g. "license scan via lockfile (scanner blocked)", "click-through via Playwright on staging">
@@ -82,7 +82,7 @@ Since last check (2026-11-02): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 ne
   <or: `$ curl -sI http://example.com` → `HTTP/1.1 200 OK` (no redirect to HTTPS)>
 - **Ruled out:** <what the second look checked, e.g. "No ownership check in middleware.ts or the RLS policy for invoices">
 - **Fix:** <the specific technical change> · **Recipe:** <the `references/fixes.md` recipe whose **Covers:** line lists this check ID> · **Safe to auto-fix:** yes / no (needs your decision)
-- **Prompt to fix it:**
+- **Prompt to fix it:** *(every blocker gets one; when only the user can fix it, write **Steps for you:** instead)*
   > <A ready-to-paste instruction for an AI coding tool, specific to this codebase. Example: "In app/api/invoices/[id]/route.ts, only return the invoice if invoice.user_id equals the current session user's id; return 404 otherwise. Add a test proving user A cannot fetch user B's invoice.">
 
 <repeat>
@@ -95,12 +95,16 @@ Since last check (2026-11-02): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 ne
 
 ## ❓ Questions for you
 
-Includes every ❓ **Needs checking** item: what we couldn't confirm, why, and exactly how to check it.
+Only the `ASK:` questions the user skipped (the rest were asked before this report and are already counted). Answer any time: "answer question 2".
 
-Things that can't be checked from the code. Answer these and I'll update the report.
+1. <Example: "Should every technician see every client, or only clients they visit?">
 
-1. <Example: "Have you ever restored a backup to check it works?">
-2. <Example: "Which countries are your users in? This decides which privacy laws apply.">
+## 🖥️ Check these yourself
+
+The `CHECK:` items: settings and runs only the user can see. One line each, with exactly where to look; say "done" or the answer, and the score updates.
+
+- [ ] <Example: Cloudflare → My Profile → Authentication: turn on 2FA (OPS-031)>
+- [ ] <Example: open the app on a phone at 375px wide: do the forms fit? (UX-006)>
 
 ## ⚖️ Needs a lawyer
 
@@ -213,10 +217,10 @@ Before each launch or big release; after adding payments, sign-in, uploads, AI f
 ## 🏁 Score card
 
 ```text
-vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers · Full check · 13 Nov 2026
+vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks) · Full check · 13 Nov 2026
 ```
 
-*Pasted from the `Score card:` line `coverage.py` printed.*
+*Pasted from the `Score card:` line `coverage.py` printed, with the number of blocker headings filled in.*
 
 <only when there are no blockers: the badge snippet; only for 🟢: the ⭐ line, see below>
 
@@ -242,7 +246,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers · Full ch
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.5 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.6 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -257,7 +261,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.5 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.6 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -349,7 +353,7 @@ These go at the very end of the saved report **and** the chat summary.
 ### Score card (always)
 One line, in a `text` code block, so it screenshots cleanly:
 
-`vibe-check: <🟢 SHIP | 🟡 SHIP AFTER FIXES | 🔴 DO NOT SHIP> · Score <n>/100 · <passed>/<applicable> checks · <n> blockers · <Quick check|Full check|Enterprise check> · <D Mon YYYY>`
+`vibe-check: <🟢 SHIP | 🟡 SHIP AFTER FIXES | 🔴 DO NOT SHIP> · Score <n>/100 · <passed>/<applicable> checks · <problems> blockers (<blocker checks> checks) · <Quick check|Full check|Enterprise check> · <D Mon YYYY>`: *problems* is the number of blocker headings (one per real problem), *blocker checks* the number from `coverage.py`
 
 - `passed / applicable` counts only items marked PASS out of items that weren't N/A. CAN'T TELL counts as not passed.
 - **Never include** findings, secrets, private URLs, file paths, or the app name, unless the user asks for the app name. The card is meant to be shared publicly.
@@ -368,4 +372,4 @@ Replace `<score>`, `<band>` (spaces as `%20`) and `<color>`: `brightgreen` for R
 One line, after the badge: *"If vibe-check helped, a ⭐ on https://github.com/vikneshchandrasekaran21/Vibe-check helps others find it."* Don't repeat it in the same session, and never show it for 🟡 or 🔴.
 
 ### Footer (always, removable)
-The last line of the saved report: `<sub>Checked with vibe-check v<installed> · latest: github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · update: <update step for this tool></sub>`. Leave it out if the user has asked for no footer (or `.vibe-check/config` contains `footer: false`). Never add it to the user's app, pages or code, only to the report.
+The last line of the saved report: `<sub>Checked with vibe-check v<installed> · latest: github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · update: <the exact command from the `HOW:` line of version_check.py, e.g. `npx skills update -g`></sub>`. Leave it out if the user has asked for no footer (or `.vibe-check/config` contains `footer: false`). Never add it to the user's app, pages or code, only to the report.

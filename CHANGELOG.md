@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.6.6 (2026-11-14)
+
+**Asks before it acts, never touches your code, and shows the proof for every check.**
+- **Proof for every check, passes included.** The report now ends with *📚 Every check, with what was found*: every check, grouped by area, with its result and the evidence (the file and line, or the command). `coverage.py --verify-report` writes it from the ledger, so it can't be made up or skipped.
+- **The questions are asked, not just listed.** `CAN'T TELL` rows now start with `ASK:` (a question only you can answer) or `CHECK:` (something only you can look at, like a dashboard setting). The `ASK:` questions are asked as choices before the report, 4 at a time, and you can skip the rest. `CHECK:` items go in a new *🖥️ Check these yourself* list. The report is refused if a question was neither asked nor skipped.
+- **An audit never changes your code.** `profile.py` takes a fingerprint of the project at the start, and the report is refused if any project file changed during the audit. Only approved fixes may change files, and each one is listed in `fix-log.md`. "Fix" now means only that: correcting vibe-check's own notes is called tidying the notes.
+- **It asks first** before running your app (live tests, with the time they add), opening any copy of production data, or checking a password. It never tests real users' passwords.
+- **Full or Quick is a choice, with the time** for each, when you don't name one.
+- **Fewer wasted tokens:** areas that don't apply (no mobile app, no AI features…) get one N/A line and their files are never opened. Evidence paths can be shortened when they're unique, and a near-miss quote gets a hint with the closest real line, instead of a rewrite loop.
+- **It never goes quiet:** a short line when each step or helper starts and finishes, and every couple of minutes during long work.
+- **Blockers are counted clearly:** the score card says `N blockers (M checks)`, since one problem can fail several checks, and every blocker has a *Prompt to fix it* (or *Steps for you* when only you can fix it).
+- **EU-only rules:** a check that only blocks for EU users (like LAW-001) drops to 🟡 when your users are outside the EU.
+
 ## v3.6.5 (2026-11-14)
 
 **No false "Failed", and the first line is never skipped.**

@@ -119,11 +119,11 @@ if nums != list(range(1, len(nums) + 1)): err(f"SKILL.md: blind spots not number
 # 7. report template + self-check
 tpl = (REFS / "report-template.md").read_text()
 for sec in ["## Result", "Blockers", "Fix before scale", "Questions for you", "Needs a lawyer", "What passed", "Coverage", "Not checked", "Score card", "Safe to auto-fix", "Prompt to fix it",
-            "Evidence:", "Ruled out:", "🔬 Confirmed", "🔎 Likely", "Needs checking", "Confidence",
+            "Evidence:", "Ruled out:", "🔬 Confirmed", "🔎 Likely", "Check these yourself", "Confidence",
             "coverage.py", "Inventory", "Sweep", "Tools run", "Not done"]:
     if sec not in tpl: err(f"report-template.md: missing '{sec}'")
 for must in ["coverage table", "fix prompt", "safe to auto-fix", "score card", "re-check", ".vibe-check/",
-             "quote the proof", "second look", "Confirmed", "Likely", "Needs checking", "No facts from memory", "Ruled out", "try to prove the finding wrong",
+             "quote the proof", "second look", "Confirmed", "Likely", "Check these yourself", "No facts from memory", "Ruled out", "try to prove the finding wrong",
              "scripts/inventory.py", "scripts/sweep.py", "scripts/coverage.py", ".vibe-check/ledger.md", "--remaining", "COMPLETE",
              "Tools run", "INV-", "RULED OUT", "references/sweep-patterns.md", "just before", "Never write a row you didn't actually check"]:
     if must.lower() not in skill.lower(): err(f"SKILL.md: report or accuracy rules don't mention '{must}'")
@@ -169,7 +169,7 @@ for must in ["## Step 0: Version check", "scripts/version_check.py", "VIBE_CHECK
              "https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/main/skills/vibe-check/SKILL.md",
              "couldn't connect", "npx skills update -g", "Lovable", "Claude app", "adapters/", "dist/vibe-check.md"]:
     if must not in skill: err(f"SKILL.md is missing '{must}' (version check / privacy rule)")
-for must in ["v<installed>", "A newer vibe-check is out", "Update check:** couldn't connect here", "releases/latest", "update step for this tool"]:
+for must in ["v<installed>", "A newer vibe-check is out", "Update check:** couldn't connect here", "releases/latest", "`HOW:` line from version_check.py"]:
     if must not in tpl: err(f"report-template.md is missing '{must}' (version line / update notice)")
 rel = (ROOT / "scripts" / "release.sh").read_text() if (ROOT / "scripts" / "release.sh").exists() else ""
 for must in ["skills/vibe-check/SKILL.md", 'gh release create "v$V"', "CHANGELOG.md", "scripts/validate.py"]:
@@ -344,6 +344,26 @@ _rel = (ROOT / "scripts" / "release.sh").read_text()
 if _rel.find("npx -y skills add") > _rel.find("gh release delete") or "set +e" not in _rel:
     err("release.sh must install on this computer before the optional tidy-up, and the tidy-up must not fail the release")
 if "(<skill folder>)`" not in skill_main: err("SKILL.md first line must show the skill folder")
+
+# 27. v3.6.6 ask first, never change code, evidence for every check
+_cov = (SK / "scripts" / "coverage.py").read_text(); _prof = (SK / "scripts" / "profile.py").read_text()
+for _must in ["APPX_OPEN", "def build_appendix(", "def write_appendix(", "def changed_since_fingerprint(", "def ask_kind(", "weren't asked",
+              "An audit never changes the user's code", "EU_ONLY", "def resolve_cited(", "def closest_line(", "Prompt to fix it", "Steps for you"]:
+    if _must not in _cov: err(f"coverage.py is missing '{_must}' (v3.6.6)")
+if "def fingerprint(" not in _prof or "fingerprint.json" not in _prof: err("profile.py must write .vibe-check/fingerprint.json")
+_led = (REFS / "ledger.md").read_text(); _rep = (REFS / "reporting.md").read_text(); _tpl = (REFS / "report-template.md").read_text()
+_lt = (REFS / "live-tests.md").read_text(); _hb = (REFS / "helper-brief.md").read_text(); _fx = (REFS / "fixing.md").read_text()
+for _name, _txt, _musts in [
+    ("ledger.md", _led, ["`ASK:`", "`CHECK:`"]),
+    ("reporting.md", _rep, ["## First: ask the questions", "answers.md"]),
+    ("report-template.md", _tpl, ["Check these yourself", "blockers (", "Steps for you"]),
+    ("live-tests.md", _lt, ["Production data stays closed", "never test real users' passwords"]),
+    ("helper-brief.md", _hb, ["Never change a project file"]),
+    ("fixing.md", _fx, ["`Changed <path>`"]),
+    ("SKILL.md", skill_main, ["**Ask first, as a choice, before**", "**\"Fix\" means only that:**", "**Never go quiet.**", "`ASK:`", "`CHECK:`", "never opened"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.6)")
+if "*(blocker for EU users)*" not in (REFS / "lawsuits.md").read_text(): err("lawsuits.md: LAW-001 must carry *(blocker for EU users)*")
 
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())

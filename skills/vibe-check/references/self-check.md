@@ -25,4 +25,9 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*.
+- [ ] The report has the *📚 Every check, with what was found* appendix written by `coverage.py` (not by hand), and the score card says `N blockers (M checks)`.
+- [ ] No project file changed during the audit (the fingerprint guard passed), and "fix" was used only for approved code changes.
+- [ ] Running the app, opening copies of production data and any password check were asked first, and no real user's password was tested.
+- [ ] Modules the profile rules out have one `N/A` row each and their files were never opened.
 - [ ] The reply ends with the next-step choice and the phrases the user can say.

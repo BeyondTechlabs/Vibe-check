@@ -100,6 +100,18 @@ PATH_SIGNALS = [
 ]
 
 
+def fingerprint(root: Path):
+    """Size and modification time of every project file (same skips as walk), to prove the audit changed nothing."""
+    fp = {}
+    for rel, p in walk(root):
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        fp[rel] = [st.st_size, st.st_mtime_ns]
+    return fp
+
+
 def walk(root: Path):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
@@ -194,6 +206,10 @@ def main() -> int:
             "modules_with_evidence": {m: sorted(set(w))[:25] for m, w in modules.items()},
             "evidence": hits[:3000]}
     (out / "profile.json").write_text(json.dumps(meta, indent=1, ensure_ascii=False))
+    # the no-code-change guard: coverage.py --verify-report compares the project with this at the end of the audit
+    if True:   # a new audit starts here, so a new fingerprint
+        (out / "fingerprint.json").write_text(json.dumps({"note": "taken when the audit started; never reset it to hide a change",
+                                                          "files": fingerprint(root)}, indent=0))
     md = ["# vibe-check profile (from the code)", "",
           "What the code shows, before any questions. **An answer can add to this, but never remove it:** a module listed "
           "under *Must run* can't be marked N/A as a whole, even if the founder says it doesn't apply. If the code is really unused, "

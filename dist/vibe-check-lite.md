@@ -1,8 +1,8 @@
-# vibe-check lite v3.6.5
+# vibe-check lite v3.6.6
 
 The short version of vibe-check for chat-based builders with a paste limit (Bolt, v0, ChatGPT, Gemini). It has the AI blind spots and every 🔴 launch blocker. For the full audit (650+ checks, helper scripts, hunt mode, live tests), install the skill: `npx skills add vikneshchandrasekaran21/Vibe-check`.
 
-**First line of your reply:** `Running vibe-check lite v3.6.5 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
+**First line of your reply:** `Running vibe-check lite v3.6.6 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
 
 ## Rules
 1. **Audit first. Don't change code** until the user approves fixes.
@@ -216,7 +216,7 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 
 ## Lawsuit magnets and jurisdictions
 
-- 🔴 LAW-001 **Third-party fonts loaded from outside servers**: Google Fonts or other font CDNs loaded from `fonts.googleapis.com`, `fonts.gstatic.com`, `use.typekit.net` or similar send every visitor's IP address to that company.
+- 🔴 LAW-001 **Third-party fonts loaded from outside servers**: *(blocker for EU users)* Google Fonts or other font CDNs loaded from `fonts.googleapis.com`, `fonts.gstatic.com`, `use.typekit.net` or similar send every visitor's IP address to that company.
 - 🔴 LAW-002 **Trackers fire before consent**: analytics, ad pixels (Meta, TikTok, Google Ads, LinkedIn), session replay (Hotjar, Clarity, FullStory, LogRocket), heatmaps and live chat or chatbot widgets must not load until the user agrees (where consent is required)
 - 🔴 LAW-003 **Third-party embeds load before consent**: YouTube, Vimeo, Google Maps, social media embeds, reCAPTCHA and similar also send visitor data.
 - 🔴 LAW-004 **Chat and session replay capture sensitive input**: chat widgets, session replay and form analytics must not record passwords, payment, health or children's data.

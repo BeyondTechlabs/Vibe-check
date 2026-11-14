@@ -15,7 +15,8 @@ Date: YYYY-MM-DD
 |---|---|---|
 | SEC-001 | PASS | src/lib/auth.ts:4 uses Clerk; no custom password code (grep "bcrypt\|jwt.sign": 0 hits) |
 | SEC-030 | FAIL 🔎 Likely | app/notes/[id]/page.tsx:41 renders note.body with dangerouslySetInnerHTML |
-| SEC-047 | CAN'T TELL | invite codes come from an external service; question for the user |
+| SEC-047 | CAN'T TELL | ASK: invite codes come from an external service. Are they single-use and do they expire? |
+| OPS-031 | CAN'T TELL | CHECK: Cloudflare → My Profile → Authentication: is 2FA on? |
 | PLT-011..PLT-015 | N/A | not on Firebase |
 | HLT-* | N/A | no health, medical or fitness data |
 | INV-api_routes | 47/47 | every route traced to its auth check |
@@ -26,6 +27,10 @@ Date: YYYY-MM-DD
 ```
 
 - **Results:** `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL`. Every row needs its own evidence or reason. Copy-pasted evidence is rejected.
+- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look (a dashboard setting, a browser run), followed by exactly where to look. `ASK:` items are asked before the report (see `reporting.md`); `CHECK:` items become the *Check these yourself* list.
+- **Evidence that's easy to verify:** cite `path:line` (a shortened path is fine when it matches only one file) and quote code as it appears. When `coverage.py` rejects a row it says why and shows the closest real line: correct that row once and move on. Don't rewrite rows that passed. **This is tidying the audit notes, never "fixing"**: that word is only for changing the user's code after they approve.
+- **Blockers that depend on the country:** a 🔴 check marked *(blocker for EU users)* that fails in an app with no EU or EEA users is recorded as usual, with `outside the EU` in the evidence; it then counts as ⚠️ should-fix.
+- **Modules that don't apply:** for a profile module the profile rules out (no mobile app, no AI, no payments…), don't open its file. Write one row, `MOB-* | N/A | profile: no mobile app (profile.json)`, and move on.
 - **Ranges and `*` are for N/A only** (a platform section you don't use, a profile module that doesn't apply). Core modules are never N/A as a whole.
 - **`INV-<category>` rows:** checked/found for every inventory category that has items. **`H-` rows:** a verdict for every sweep hit. **`V-` rows:** a verdict for every component in `.vibe-check/versions.md`, with its source.
 - **Split the work when you can.** In tools with helper agents (subagents), give each module, or group of small modules, to its own fresh helper with the inventory, sweep, versions and profile files. Each helper writes its rows to `.vibe-check/ledger.d/<module>.md`; `coverage.py` reads them together with the main ledger. Without helpers, work one module at a time and resume with `coverage.py --remaining`.
@@ -43,7 +48,7 @@ Date: YYYY-MM-DD
 | Secret scan | The grep patterns in blind spot #3, over files and `git log -p` |
 | Click-through QA | Static review: every `onClick`, `<a href>`, form `action` and route traced to a handler that exists (see `functional-qa.md`) |
 | Lighthouse / axe | Manual review of the main pages against `launch-ux.md` |
-| Dashboard-only settings (backups, MFA, billing alerts, branch protection, uptime monitors) | Check config files and `gh` / platform CLIs if logged in; otherwise mark CAN'T TELL and ask the user |
+| Dashboard-only settings (backups, MFA, billing alerts, branch protection, uptime monitors) | Check config files and `gh` / platform CLIs if logged in; otherwise `CAN'T TELL` with `CHECK:` and exactly where to look |
 | Build | List it under "Not checked", with the exact command for the user to run |
 
 **vibe-check connector:** if tools from the vibe-check connector are available (for example `scan_live_site`, `crawl_app`, `check_supabase`, `check_email_domain`, `check_dependencies`, `save_report`), use them for the live and hosted checks and to save the report. Otherwise use the local tools and fallbacks above. Send the connector URLs, lockfiles and summaries only, never source code or secrets.

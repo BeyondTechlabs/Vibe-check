@@ -2,6 +2,21 @@
 
 Read this at Step 5, before writing the report. The exact layouts are in `report-template.md`.
 
+## First: ask the questions (before writing anything)
+
+When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`. Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md): 4 per round, the most serious checks first, *Skip the rest* always allowed. Turn each answer into PASS, FAIL or a `CHECK:` row in the ledger, and record it in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`). `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
+
+**Without a question tool**, ask the same questions as a numbered list the user can answer in one line:
+  ```text
+  ❓ Q1 · Who uses your app?
+     1. Adults only (Recommended: no age fields found in your code)
+     2. Students or children
+     3. Both
+     4. Not sure
+  ❓ Q2 · …
+  Reply like: 1, 3   (one number per question, in order)
+  ```
+
 ## Contents of the report, in this order
 
 Use the format in `report-template.md`:
@@ -19,7 +34,7 @@ Use the format in `report-template.md`:
 
 **Save** the full report to `.vibe-check/reports/YYYY-MM-DD.md`, and copy the ledger next to it as `.vibe-check/reports/YYYY-MM-DD-ledger.md` and make sure `.vibe-check/` is in `.gitignore` (add it if needed; this is the only file change allowed during the audit). Never save findings anywhere they could become public.
 
-**Then verify the report against the ledger:** `python3 <skill-folder>/scripts/coverage.py --verify-report .vibe-check/reports/YYYY-MM-DD.md` must print `REPORT VERIFIED` (it checks the score, the totals, the coverage rows, the score card and, when there's an earlier run, the *Since last check* line). **It also refuses the report if the report, `.vibe-check/summary.md` or the ledger contains a full secret** (the same patterns `sweep.py` uses): mask it and verify again. If a number in the report doesn't match the ledger, fix the report (never the other way round). **Then keep the run:** `coverage.py --save` stores it in `.vibe-check/history/`, so the next run can show what was fixed, what's new and what came back. `.vibe-check/results.json` holds the same numbers for the badge and the opt-in stats.
+**Then verify the report against the ledger:** `python3 <skill-folder>/scripts/coverage.py --verify-report .vibe-check/reports/YYYY-MM-DD.md` must print `REPORT VERIFIED` (it checks the score, the totals, the coverage rows, the score card, one fix prompt per blocker and, when there's an earlier run, the *Since last check* line). **It also writes *Every check, with what was found* into the report** (each check's evidence from the ledger, grouped by area) so the user can see why something passed, at no extra cost, and **refuses the report if any project file changed since the audit started** without an approved fix card listing it. **It also refuses the report if the report, `.vibe-check/summary.md` or the ledger contains a full secret** (the same patterns `sweep.py` uses): mask it and verify again. If a number in the report doesn't match the ledger, fix the report (never the other way round). **Then keep the run:** `coverage.py --save` stores it in `.vibe-check/history/`, so the next run can show what was fixed, what's new and what came back. `.vibe-check/results.json` holds the same numbers for the badge and the opt-in stats.
 
 ## Optional, once: share anonymous counts
 

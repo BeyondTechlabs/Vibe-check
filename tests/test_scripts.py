@@ -286,9 +286,10 @@ def main() -> int:
         check(r.returncode == 0 and "1 new, not in any checklist" in r.stdout, f"coverage: a proven new hunt finding should count:\n{r.stdout[-500:]}")
 
         # FAIL with a confidence label and CAN'T TELL are accepted; quick level needs fewer checks
-        ok_rows = [full[0].replace("PASS", "FAIL 🔬 Confirmed"), full[1].replace("PASS", "CAN'T TELL")] + full[2:] + inv_rows + hit_rows
+        ok_rows = [full[0].replace("PASS", "FAIL 🔬 Confirmed"), full[1].replace("| PASS | ", "| CAN'T TELL | ASK: who may see this? ")] + full[2:] + inv_rows + hit_rows
+        ask_id = ids[1]
         r = run("coverage.py", str(ledger(out, ok_rows)))
-        check(r.returncode == 0 and "1 blockers" in r.stdout, f"coverage: labelled FAIL should pass and count as a blocker:\n{r.stdout[-400:]}")
+        check(r.returncode == 0 and "blockers (1 checks)" in r.stdout, f"coverage: labelled FAIL should pass and count as a blocker:\n{r.stdout[-400:]}")
         # v3.5: one open blocker caps the score at 69, the verdict is DO NOT SHIP, and the totals add up
         rj = json.loads((out / "results.json").read_text()); T = rj["totals"]
         check(rj["score"] == 69 and rj["capped"] and rj["raw_score"] > 69 and rj["verdict"] == "🔴 DO NOT SHIP" and rj["band"] == "Needs work",
@@ -334,16 +335,18 @@ def main() -> int:
         # v3.1: report receipt (numbers in the report must match the ledger)
         r = run("coverage.py", str(ledger(out, ok_rows)))
         top = r.stdout[r.stdout.index("## Result"):r.stdout.index("**Total**")]
-        card = re.search(r"Score card: (vibe-check: .+)", r.stdout).group(1)
-        sl = re.search(r"· (\d+)/(\d+) checks · (\d+) blockers", card).groups()
+        card = re.search(r"Score card: (vibe-check: .+)", r.stdout).group(1).replace("<blocker headings in the report>", "1")
+        sl = re.search(r"· (\d+)/(\d+) checks · (\d+) blockers \((\d+) checks\)", card).groups()
+        BLK = "## ❌ Blockers: must fix before launch\n\n### 1. A planted blocker · 🔬 Confirmed\n- **Prompt to fix it:** fix the planted thing\n\n## ⚠️ Fix before scale\n"
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
         report = out / "report.md"
-        report.write_text(f"# report\n\n{top}\n```text\n{card}\n```\n")
+        report.write_text(f"# report\n\n{top}\n{BLK}\n```text\n{card}\n```\n")
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 0 and "REPORT VERIFIED" in r.stdout, f"coverage: a report pasted from coverage.py should verify:\n{r.stdout[-500:]}")
         report.write_text(report.read_text().replace(f"{sl[0]}/{sl[1]} checks", f"{int(sl[0]) + 5}/{sl[1]} checks"))
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 1 and "REPORT:" in r.stdout, "coverage: a report with typed numbers should be rejected")
-        good_report = f"# report\n\n{top}\n```text\n{card}\n```\n"
+        good_report = f"# report\n\n{top}\n{BLK}\n```text\n{card}\n```\n"
         ckm = re.search(r"\*\*Checked\*\* \| \*\*(\d+) of (\d+)\*\*", good_report)
         report.write_text(good_report.replace(ckm.group(0), f"**Checked** | **{int(ckm.group(1)) - 3} of {ckm.group(2)}**"))
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
@@ -365,6 +368,70 @@ def main() -> int:
         report.write_text(good_report.replace("Score " + sc_now + "/100", "Score 88/100", 1))
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 1 and "REPORT:" in r.stdout, "coverage: a report with a typed score should be rejected")
+        # v3.6.6: every check with its evidence goes into the report, written by the script
+        report.write_text(good_report)
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        rep = report.read_text()
+        check(r.returncode == 0 and "📚 Every check, with what was found" in rep and f"{ids[5]}" in rep and "handles it" in rep,
+              f"appendix: every check with its evidence should be written into the report:\n{r.stdout[-300:]}")
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(report.read_text().count("📚 Every check") == 1, "appendix: running again must replace it, not add a second one")
+        # questions must be asked (or skipped by the user) before the report
+        (out / "answers.md").write_text("nothing yet\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "weren't asked" in r.stdout, "questions: an unasked ❓ question should block the report")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+        # every blocker needs a fix prompt (or steps for the user), and the score card counts problems and checks
+        report.write_text(good_report.replace("- **Prompt to fix it:** fix the planted thing", "- fix it somehow"))
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "no 'Prompt to fix it'" in r.stdout, "report: a blocker without a fix prompt should be rejected")
+        report.write_text(good_report.replace("· 1 blockers (1 checks)", "· 3 blockers (1 checks)"))
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "blocker headings" in r.stdout, "report: the problem count must match the blocker headings")
+        # the audit never changes the user's code: a changed file fails the report unless an approved fix card lists it
+        victim = app / REAL[0]
+        before = victim.read_bytes()
+        victim.write_bytes(before + b"\n// changed during the audit\n")
+        report.write_text(good_report)
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "changed since the audit started" in r.stdout and REAL[0] in r.stdout,
+              f"no-change guard: a file changed during the audit should block the report:\n{r.stdout[-400:]}")
+        (out / "fix-log.md").write_text(f"🔧 Fix 1 of 1 · approved\nChanged  {REAL[0]} · +1 line\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 0, f"no-change guard: a change listed in an approved fix card is allowed:\n{r.stdout[-400:]}")
+        victim.write_bytes(before); (out / "fix-log.md").unlink()
+        run("profile.py", str(app))
+        # CAN'T TELL must say whether it's a question (ASK:) or something to check (CHECK:)
+        r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | ")] + full[2:] + inv_rows + hit_rows)))
+        check(r.returncode == 1 and "ASK:" in r.stdout and "CHECK:" in r.stdout, "coverage: CAN'T TELL without ASK:/CHECK: should be rejected")
+        r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | CHECK: Cloudflare → 2FA ")] + full[2:] + inv_rows + hit_rows)))
+        rj2 = json.loads((out / "results.json").read_text())["totals"]
+        check(rj2["check_yourself"] == 1 and rj2["questions"] == 0 and "(0 questions · 1 to check yourself)" in r.stdout,
+              f"totals: CHECK: items should count as 'to check yourself': {rj2}")
+        # evidence is forgiving where harmless: a shortened path that matches one file, and quote style in code
+        cited0 = REAL[1 % len(REAL)]                      # full[0] cites REAL[1]
+        parts = cited0.split("/")
+        short = next("/".join(parts[i:]) for i in range(len(parts) - 1, -1, -1)
+                     if sum(1 for f in REAL if f == "/".join(parts[i:]) or f.endswith("/" + "/".join(parts[i:]))) == 1)
+        check(short != cited0, f"test setup: no shorter unique path for {cited0}")
+        r = run("coverage.py", str(ledger(out, [full[0].replace(f"{cited0}:1", f"{short}:1")] + full[1:] + inv_rows + hit_rows)))
+        check(r.returncode == 0, f"evidence: a shortened path that matches one file ({short}) should be accepted:\n{r.stdout[-300:]}")
+        r = run("coverage.py", str(ledger(out, [full[0].replace(f"{cited0}:1", f"{parts[-1]}:1")] + full[1:] + inv_rows + hit_rows)))
+        check(r.returncode == 1 and "write the full path" in r.stdout, f"evidence: a path matching several files must be rejected with a hint:\n{r.stdout[-300:]}")
+        r = run("coverage.py", str(ledger(out, [full[0].replace(f"{cited0}:1", "nope/missing-file.ts:1")] + full[1:] + inv_rows + hit_rows)))
+        check(r.returncode == 1 and "doesn't exist in the project" in r.stdout, "evidence: a missing file must still be rejected")
+        # EU-only blockers: a FAIL recorded as 'outside the EU' counts as should-fix
+        import importlib.util as _ilu
+        _sp = _ilu.spec_from_file_location("cov2", SCRIPTS / "coverage.py"); cov2 = _ilu.module_from_spec(_sp); _sp.loader.exec_module(cov2)
+        _o, _ck, _p = cov2.load_checklist()
+        check("LAW-001" in cov2.EU_ONLY, "EU-only: LAW-001 (Google Fonts) should be marked as a blocker for EU users only")
+        _r = {"LAW-001": ("FAIL", "index.html:17 fonts.googleapis.com · India-only staff app, outside the EU", "Confirmed")}
+        check(cov2.status_of("LAW-001", _r, _ck) == "SHOULD", "EU-only: LAW-001 outside the EU should count as should-fix")
+        _r = {"LAW-001": ("FAIL", "index.html:17 fonts.googleapis.com · users in Germany", "Confirmed")}
+        check(cov2.status_of("LAW-001", _r, _ck) == "BLOCKER", "EU-only: LAW-001 with EU users stays a blocker")
+        _r = {"SEC-001": ("FAIL", "auth.ts:1 x · outside the EU", "Confirmed")}
+        check(cov2.status_of("SEC-001", _r, _ck) == "BLOCKER", "EU-only: other blockers can't be downgraded")
+        ledger(out, ok_rows)   # put the ledger back for the fix-plan tests below
 
         # v3.1: fix plan keeps statuses between runs
         r = run("coverage.py", str(out / "ledger.md"), "--fix-plan")
@@ -414,7 +481,7 @@ def main() -> int:
         shutil.rmtree(out / "history", ignore_errors=True)
         r = run("coverage.py", str(ledger(out, ok_rows)), "--save")
         check("saved to history" in r.stdout, f"history: --save didn't save:\n{r.stdout[-300:]}")
-        fixed_rows = [full[0], full[1].replace("PASS", "CAN'T TELL")] + full[2:] + inv_rows + hit_rows
+        fixed_rows = [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | ASK: who may see this? ")] + full[2:] + inv_rows + hit_rows
         r = run("coverage.py", str(ledger(out, fixed_rows)), "--save")
         check("✅ 1 fixed" in r.stdout and "↩️ 0 came back" in r.stdout and "Score 69 →" in r.stdout,
               f"history: BS-01 fixed should show '✅ 1 fixed':\n{r.stdout[:700]}")
@@ -425,7 +492,8 @@ def main() -> int:
         r = run("coverage.py", str(ledger(out, ok_rows)))
         top = r.stdout[r.stdout.index("## Result"):r.stdout.index("**Total**")]
         card = re.search(r"Score card: (vibe-check: .+)", r.stdout).group(1)
-        with_since = f"# report\n\n{top}\n```text\n{card}\n```\n"
+        card = card.replace("<blocker headings in the report>", "1")
+        with_since = f"# report\n\n{top}\n{BLK}\n```text\n{card}\n```\n"
         check("Since last check" in with_since, "history: the Result block should carry the 'Since last check' line")
         report.write_text(with_since)
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
