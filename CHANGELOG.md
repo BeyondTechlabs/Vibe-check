@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.10 (2026-11-14)
+
+**Fixed: the logo didn't show in some PDF viewers.**
+- v3.6.9 drew the logo's dots as zero-length lines with round ends, which some viewers skip, so the band looked empty. Each dot is now a filled circle, which every PDF viewer draws. The same fix applies to the green dot next to the project name.
+
 ## v3.6.9 (2026-11-14)
 
 **The vibe-check logo on the PDF.**

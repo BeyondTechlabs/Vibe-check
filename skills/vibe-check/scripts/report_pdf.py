@@ -44,18 +44,25 @@ LOGO = """#...#.#####.####..#####........###..#...#.#####..###..#...#
 ..#...#####.####..#####........###..#...#.#####..###..#...#""".splitlines()
 
 
-def logo_ops(x, top, pitch, unlit=(0.137, 0.137, 0.149), lit=(0.914, 0.914, 0.918)):
-    """Dots as round-capped zero-length lines: small, sharp at any zoom."""
-    out = ["1 J"]
-    for colour, char, size in ((unlit, ".", 0.38), (lit, "#", 0.66)):
-        out.append("%.3f %.3f %.3f RG %.2f w" % (colour + (pitch * size,)))
+def circle(cx, cy, r):
+    """A filled circle as four Bezier curves (every PDF viewer draws these)."""
+    k = 0.5523 * r
+    return ("%.2f %.2f m %.2f %.2f %.2f %.2f %.2f %.2f c %.2f %.2f %.2f %.2f %.2f %.2f c "
+            "%.2f %.2f %.2f %.2f %.2f %.2f c %.2f %.2f %.2f %.2f %.2f %.2f c f" % (
+                cx + r, cy, cx + r, cy + k, cx + k, cy + r, cx, cy + r, cx - k, cy + r, cx - r, cy + k, cx - r, cy,
+                cx - r, cy - k, cx - k, cy - r, cx, cy - r, cx + k, cy - r, cx + r, cy - k, cx + r, cy))
+
+
+def logo_ops(x, top, pitch, unlit=(0.2, 0.2, 0.215), lit=(0.914, 0.914, 0.918)):
+    """The dot-matrix logo: unlit dots first, lit dots on top."""
+    out = []
+    for colour, char, radius in ((unlit, ".", 0.2), (lit, "#", 0.34)):
+        out.append("%.3f %.3f %.3f rg" % colour)
         for r, row in enumerate(LOGO):
             for c, ch in enumerate(row):
                 if ch == char:
-                    cx, cy = x + c * pitch, top - r * pitch
-                    out.append("%.2f %.2f m %.2f %.2f l S" % (cx, cy, cx, cy))
-    out.append("0 J")
-    return " ".join(out)
+                    out.append(circle(x + c * pitch, top - r * pitch, pitch * radius))
+    return "\n".join(out)
 
 
 # Adobe font metrics (1/1000 em) for the characters we draw; anything else uses 556.
@@ -434,7 +441,7 @@ def brand(doc, ops, n, total):
         tag = (doc.project + " · " if doc.project else "") + (doc.date or "")
         if tag:
             tw_ = width(tag, "R", 8)
-            pre.append("%.3f %.3f %.3f RG 5 w 1 J %.2f %.2f m %.2f %.2f l S 0 J" % (GREEN + ((W - tw_) / 2 - 8, H - 93.4, (W - tw_) / 2 - 8, H - 93.4)))
+            c(GREEN); pre.append(circle((W - tw_) / 2 - 8, H - 93.4, 2.5))
             pre.append("BT /F1 8 Tf %.2f %.2f Td 0.443 0.443 0.478 rg %s Tj ET" % ((W - tw_) / 2, H - 96, pdf_str(tag)))
     else:           # a slim band with the small logo
         c(INK); pre.append("0 %.2f %.2f 40 re f" % (H - 40, W))
