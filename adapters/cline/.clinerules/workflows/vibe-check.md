@@ -67,8 +67,8 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
 6. **Use only safe actions.** Don't run destructive commands or touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app (live tests: say the extra time) or opening any copy of production data, and **never test real users' passwords**, even offline (the **live-tests** section below). Anything that writes data (signups, form submits, profile edits) runs only on dev or staging, using test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with the user's approval and paid APIs mocked.
-7. **Mask secrets.** Show only the first 4 characters and where the secret is (`sk_l…` in `src/lib/stripe.ts:3`).
-8. **Never change what the user built.** Their design, features, use case, flows, copy, branding and tech choices are theirs. Fix only the findings, following the *Scope guard* in the **fixing** section below.
+7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
+8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
 10. **Fresh evidence every run.** Earlier findings (in this chat or `.vibe-check/reports/`) are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
@@ -235,8 +235,8 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 0. **First ask the `ASK:` questions**, as choices (4 a round, *Skip the rest* allowed), update the ledger and `.vibe-check/answers.md`.
 1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, Score N/100 and band, *Since last check*, totals, area scorecard), coverage and Standards tables (mapping in the **standards** section below; a coverage view, never a certification). Never type a number.
 2. Write the full report in the format of the **report-template** section below: ❌ blockers with evidence, recipe, safe to auto-fix and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
-3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, and `coverage.py --save`.
-4. In the chat, show the one-screen summary (also saved as `.vibe-check/summary.md`), ask the ❓ questions as choices, then offer the next step as a choice.
+3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, `coverage.py --save`, and `report_pdf.py <report>` (the branded PDF).
+4. **Hand over the report and PDF** (see the **reporting** section below). In the chat, show the one-screen summary (also saved as `.vibe-check/summary.md`), ask the ❓ questions as choices, then offer the next step as a choice.
 
 ### Before you reply: self-check
 
@@ -1639,6 +1639,14 @@ Use the format in the **report-template** section:
 
 Show the **one-screen summary** from `references/report-template.md` (*In the chat*), and save the same text as `.vibe-check/summary.md`: the verdict and score line, *Since last check*, the totals table and area scorecard pasted from `coverage.py`, every ❌ blocker as one plain sentence plus its file, the top 3 ⚠️ items, the counts of ❓ questions, ✅ passes and ➖ checks that don't apply, and the report path. Details come on request (*"explain 2"*). Then **ask the ❓ questions as choices** (*Asking the user*) and update the result with the answers. Then ask what to do next, as a choice: **Fix the N blockers** (Recommended when there are blockers) · **Fix everything I can do safely** · **Let me pick** · **Just the report for now**. End with: *You can say: "fix" · "fix all" · "fix 2" · "explain 2" · "check again" · "continue fixing" · "undo fix 2"*. If this was a Quick run, add: *"This was a Quick check (blind spots and blockers only). Say 'vibe check this app' for the full check."*
 
+### Hand over the report (the user must be able to download it)
+
+Saving the report in `.vibe-check/` isn't enough: it's a hidden folder. After `REPORT VERIFIED`:
+
+1. Run `python3 <skill-folder>/scripts/report_pdf.py .vibe-check/reports/<date>.md`. It writes the PDF next to the report: the vibe-check band on every page, the score and verdict on the first page (from `results.json`, never typed), the same content as the `.md`. It runs on this computer and sends nothing; it refuses a report with an unmasked secret. If Python can't run here, say so and hand over the `.md` only.
+2. **Give the user both files to download:** use the tool's file-sharing tool when there is one (for example `present_files`, `SendUserFile` or an attachment), so they appear as file cards. Without one, give the **full path** of each and the command to open it: `open "<path>"` (macOS), `xdg-open "<path>"` (Linux), `start "" "<path>"` (Windows).
+3. Say in one line which to share: *"The PDF is the one to send to a co-founder or client; the .md is for AI tools."*
+
 <a id="report-template"></a>
 
 ## Report template
@@ -1889,7 +1897,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.7 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.8 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -1904,7 +1912,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.7 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.8 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2046,6 +2054,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] `report_pdf.py` made the PDF, and both the `.md` and the `.pdf` were handed over as downloadable files (or with full paths and an open command), not just saved.
 - [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*. Each answer was checked against the code first; passes that rest on an answer alone are `ANSWER: … · code: …`, and every answer that added to the profile has an `ADDS:` line and its module was checked.
 - [ ] The report has the *📚 Every check, with what was found* appendix written by `coverage.py` (not by hand), and the score card says `N blockers (M checks)`.
 - [ ] No project file changed during the audit (the fingerprint guard passed), and "fix" was used only for approved code changes.

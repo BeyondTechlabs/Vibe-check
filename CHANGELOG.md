@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.8 (2026-11-14)
+
+**Download the report, and send it as a PDF.**
+- **The report is handed to you.** Before, it was only saved in the hidden `.vibe-check/` folder, so in the Claude app there was nothing to download. Now the agent shares the `.md` and the PDF as downloadable files when the tool can, and otherwise gives the full path of each and the command to open it.
+- **A branded PDF of every report.** The new `report_pdf.py` turns the verified report into a PDF: the vibe-check band on every page, the score, verdict and totals on the first page, coloured dots for ✅ ❌ ⚠️ ❓ ➖, area bars, tables and code, and page numbers. The cover numbers come from `results.json` (written by `coverage.py`), never typed. Standard library only: it runs on your computer, sends nothing, needs nothing installed, and refuses a report that contains an unmasked secret.
+
 ## v3.6.7 (2026-11-14)
 
 **Your answers are checked against the code, and can open new checks.**

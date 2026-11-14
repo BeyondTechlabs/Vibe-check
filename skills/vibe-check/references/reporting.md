@@ -49,3 +49,12 @@ Use the format in `report-template.md`:
 ## In the chat
 
 Show the **one-screen summary** from `references/report-template.md` (*In the chat*), and save the same text as `.vibe-check/summary.md`: the verdict and score line, *Since last check*, the totals table and area scorecard pasted from `coverage.py`, every ❌ blocker as one plain sentence plus its file, the top 3 ⚠️ items, the counts of ❓ questions, ✅ passes and ➖ checks that don't apply, and the report path. Details come on request (*"explain 2"*). Then **ask the ❓ questions as choices** (*Asking the user*) and update the result with the answers. Then ask what to do next, as a choice: **Fix the N blockers** (Recommended when there are blockers) · **Fix everything I can do safely** · **Let me pick** · **Just the report for now**. End with: *You can say: "fix" · "fix all" · "fix 2" · "explain 2" · "check again" · "continue fixing" · "undo fix 2"*. If this was a Quick run, add: *"This was a Quick check (blind spots and blockers only). Say 'vibe check this app' for the full check."*
+
+## Hand over the report (the user must be able to download it)
+
+Saving the report in `.vibe-check/` isn't enough: it's a hidden folder. After `REPORT VERIFIED`:
+
+1. Run `python3 <skill-folder>/scripts/report_pdf.py .vibe-check/reports/<date>.md`. It writes the PDF next to the report: the vibe-check band on every page, the score and verdict on the first page (from `results.json`, never typed), the same content as the `.md`. It runs on this computer and sends nothing; it refuses a report with an unmasked secret. If Python can't run here, say so and hand over the `.md` only.
+2. **Give the user both files to download:** use the tool's file-sharing tool when there is one (for example `present_files`, `SendUserFile` or an attachment), so they appear as file cards. Without one, give the **full path** of each and the command to open it: `open "<path>"` (macOS), `xdg-open "<path>"` (Linux), `start "" "<path>"` (Windows).
+3. Say in one line which to share: *"The PDF is the one to send to a co-founder or client; the .md is for AI tools."*
+

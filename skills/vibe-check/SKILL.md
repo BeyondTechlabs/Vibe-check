@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.6.7"
+  version: "3.6.8"
   homepage: "https://github.com/vikneshchandrasekaran21/Vibe-check"
 ---
 
@@ -74,8 +74,8 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
 6. **Use only safe actions.** Don't run destructive commands or touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app (live tests: say the extra time) or opening any copy of production data, and **never test real users' passwords**, even offline (`references/live-tests.md`). Anything that writes data (signups, form submits, profile edits) runs only on dev or staging, using test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with the user's approval and paid APIs mocked.
-7. **Mask secrets.** Show only the first 4 characters and where the secret is (`sk_l…` in `src/lib/stripe.ts:3`).
-8. **Never change what the user built.** Their design, features, use case, flows, copy, branding and tech choices are theirs. Fix only the findings, following the *Scope guard* in `references/fixing.md`.
+7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
+8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in `references/fixing.md`.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
 10. **Fresh evidence every run.** Earlier findings (in this chat or `.vibe-check/reports/`) are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
@@ -242,8 +242,8 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 0. **First ask the `ASK:` questions**, as choices (4 a round, *Skip the rest* allowed), update the ledger and `.vibe-check/answers.md`.
 1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, Score N/100 and band, *Since last check*, totals, area scorecard), coverage and Standards tables (mapping in `references/standards.md`; a coverage view, never a certification). Never type a number.
 2. Write the full report in the format of `references/report-template.md`: ❌ blockers with evidence, recipe, safe to auto-fix and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
-3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, and `coverage.py --save`.
-4. In the chat, show the one-screen summary (also saved as `.vibe-check/summary.md`), ask the ❓ questions as choices, then offer the next step as a choice.
+3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, `coverage.py --save`, and `report_pdf.py <report>` (the branded PDF).
+4. **Hand over the report and PDF** (see `reporting.md`). In the chat, show the one-screen summary (also saved as `.vibe-check/summary.md`), ask the ❓ questions as choices, then offer the next step as a choice.
 
 ### Before you reply: self-check
 

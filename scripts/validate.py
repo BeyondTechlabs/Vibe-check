@@ -374,6 +374,16 @@ for _name, _txt, _musts in [("ledger.md", _led, ["`ANSWER:", "· code:", "`ADDS:
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.7)")
 
+# 29. v3.6.8 hand the report over, with a PDF
+_pdf = (SK / "scripts" / "report_pdf.py").read_text() if (SK / "scripts" / "report_pdf.py").exists() else ""
+for _must in ["def build_pdf(", "find_secrets", "results.json", "NO PDF"]:
+    if _must not in _pdf: err(f"report_pdf.py is missing '{_must}'")
+if re.search(r"^\s*(import|from)\s+(requests|urllib|http|socket|reportlab|fpdf)\b", _pdf, re.M): err("report_pdf.py must use the standard library only and never touch the network")
+for _name, _txt, _musts in [("reporting.md", _rep, ["## Hand over the report", "report_pdf.py", "full path", "xdg-open"]),
+                            ("SKILL.md", skill_main, ["report_pdf.py", "**Hand over the report and PDF**"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.8)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -554,7 +564,7 @@ for must in ["npx skills update -g", "VIBE_CHECK_NO_UPDATE_CHECK", "## 🔄 Upda
 if re.search(r"phone home|nothing (?:is )?sent anywhere", readme, re.I) and "version check" not in readme.lower():
     err("README.md promises it never contacts anything, but doesn't mention the version check")
 
-for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "test_scripts.py", "release.sh"]:
+for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "test_scripts.py", "release.sh"]:
     if f not in readme: err(f"README.md repo layout doesn't list {f}")
 for link in re.findall(r"\]\((?!https?://|#|mailto:)([^)]+)\)", readme):
     if not (ROOT / link.split("#")[0]).exists(): err(f"README.md links to missing file: {link}")

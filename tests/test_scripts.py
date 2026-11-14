@@ -376,6 +376,19 @@ def main() -> int:
               f"appendix: every check with its evidence should be written into the report:\n{r.stdout[-300:]}")
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(report.read_text().count("📚 Every check") == 1, "appendix: running again must replace it, not add a second one")
+        # v3.6.8: the verified report becomes a branded PDF on this computer; a secret in the report means no PDF
+        r = run("report_pdf.py", str(report))
+        pdf = report.with_suffix(".pdf")
+        data = pdf.read_bytes() if pdf.exists() else b""
+        pages = re.search(rb"/Type /Pages /Kids \[[^\]]*\] /Count (\d+)", data)
+        check(r.returncode == 0 and data.startswith(b"%PDF-1.4") and data.rstrip().endswith(b"%%EOF") and pages and int(pages.group(1)) >= 1
+              and "PDF:" in r.stdout, f"pdf: report_pdf.py should write a valid PDF next to the report:\n{r.stdout[-300:]}{r.stderr[-300:]}")
+        pdf.unlink()
+        leaky = report.with_name("leaky.md"); leaky.write_text(report.read_text() + f"\nkey: {AWS}\n")
+        r = run("report_pdf.py", str(leaky))
+        check(r.returncode == 1 and "NO PDF" in r.stdout and AWS not in r.stdout and not leaky.with_suffix(".pdf").exists(),
+              "pdf: a report with a full secret must not become a PDF (and the secret must not be printed)")
+        leaky.unlink()
         # questions must be asked (or skipped by the user) before the report
         (out / "answers.md").write_text("nothing yet\n")
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
