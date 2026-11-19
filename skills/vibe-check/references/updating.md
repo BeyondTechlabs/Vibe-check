@@ -34,7 +34,7 @@ Give the one step for their tool from the table below, then *"start a new sessio
 |---|---|
 | Installed with `npx skills add -g` (Claude Code, Codex, Cursor, Gemini CLI…) | `npx skills update -g` |
 | Installed into a project (Replit, or `npx skills add` without `-g`) | `npx skills update -p`, run in the project folder (in Replit, in the Shell) |
-| Claude app | Download `vibe-check.zip` from https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest and upload it again |
-| Lovable | Settings → Skills: import again from `https://github.com/vikneshchandrasekaran21/Vibe-check/tree/main/skills/vibe-check` |
+| Claude app | Download `vibe-check.zip` from https://github.com/BeyondTechlabs/Vibe-check/releases/latest and upload it again |
+| Lovable | Settings → Skills: import again from `https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check` |
 | A copied rules or command file (Cursor, Copilot, Windsurf, Cline, Gemini CLI) | Copy the new file from the repo's `adapters/` folder, or switch to `npx skills add` |
 | Pasted into a chat (Bolt, v0, ChatGPT) | Paste the new `dist/vibe-check.md` from the repo |

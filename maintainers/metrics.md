@@ -2,7 +2,7 @@
 
 ## Free signals you can check any time
 ```bash
-R=vikneshchandrasekaran21/Vibe-check
+R=BeyondTechlabs/Vibe-check
 gh api repos/$R --jq '{stars: .stargazers_count, forks: .forks_count, watchers: .subscribers_count}'
 gh api repos/$R/traffic/views  --jq '{views_14d: .count, unique_visitors: .uniques}'
 gh api repos/$R/traffic/clones --jq '{clones_14d: .count, unique_cloners: .uniques}'

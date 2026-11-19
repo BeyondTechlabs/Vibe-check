@@ -6,15 +6,15 @@
 
 Security · privacy · legal · reliability · launch, checked against your actual code, without changing what you built.
 
-[![Release](https://img.shields.io/github/v/release/vikneshchandrasekaran21/Vibe-check?style=for-the-badge&color=22c55e&label=release)](https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest)
+[![Release](https://img.shields.io/github/v/release/BeyondTechlabs/Vibe-check?style=for-the-badge&color=22c55e&label=release)](https://github.com/BeyondTechlabs/Vibe-check/releases/latest)
 [![Checks](https://img.shields.io/badge/checks-653-18181b?style=for-the-badge)](skills/vibe-check/references)
 [![Fix recipes](https://img.shields.io/badge/fix_recipes-75-18181b?style=for-the-badge)](skills/vibe-check/references/fixes.md)
-[![Stars](https://img.shields.io/github/stars/vikneshchandrasekaran21/Vibe-check?style=for-the-badge&logo=github&color=18181b)](https://github.com/vikneshchandrasekaran21/Vibe-check/stargazers)
+[![Stars](https://img.shields.io/github/stars/BeyondTechlabs/Vibe-check?style=for-the-badge&logo=github&color=18181b)](https://github.com/BeyondTechlabs/Vibe-check/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![check](https://img.shields.io/github/actions/workflow/status/vikneshchandrasekaran21/Vibe-check/check.yml?style=for-the-badge&label=self-test)](https://github.com/vikneshchandrasekaran21/Vibe-check/actions/workflows/check.yml)
+[![check](https://img.shields.io/github/actions/workflow/status/BeyondTechlabs/Vibe-check/check.yml?style=for-the-badge&label=self-test)](https://github.com/BeyondTechlabs/Vibe-check/actions/workflows/check.yml)
 
 ```bash
-npx skills add vikneshchandrasekaran21/Vibe-check -g -a claude-code -y
+npx skills add BeyondTechlabs/Vibe-check -g -a claude-code -y
 ```
 
 <sub>That's for Claude Code. [Commands for other tools ↓](#quick-start-copy-one-command)</sub>
@@ -101,15 +101,15 @@ Pick your tool, paste the line into your **Mac/PC Terminal**, and press Enter. T
 
 | You use… | Run this |
 |---|---|
-| **Claude Code** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a claude-code -y` |
-| **Cursor** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a cursor -y` |
-| **Codex** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a codex -y` |
-| **GitHub Copilot** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a github-copilot -y` |
-| **Gemini CLI** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a gemini-cli -y` |
-| **Several of these** | `npx skills add vikneshchandrasekaran21/Vibe-check -g -a claude-code -a cursor -a codex -y` |
-| **Claude app** (desktop or claude.ai) | No terminal: [download `vibe-check.zip`](https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest/download/vibe-check.zip) → **Settings → Customize → Skills → Add → Upload skill**. Keep it zipped |
-| **Replit** | In the Replit **Shell**: `npx skills add vikneshchandrasekaran21/Vibe-check -a replit -y` |
-| **Lovable** | **Settings → Skills → Add → import from GitHub**, and paste `https://github.com/vikneshchandrasekaran21/Vibe-check/tree/main/skills/vibe-check` |
+| **Claude Code** | `npx skills add BeyondTechlabs/Vibe-check -g -a claude-code -y` |
+| **Cursor** | `npx skills add BeyondTechlabs/Vibe-check -g -a cursor -y` |
+| **Codex** | `npx skills add BeyondTechlabs/Vibe-check -g -a codex -y` |
+| **GitHub Copilot** | `npx skills add BeyondTechlabs/Vibe-check -g -a github-copilot -y` |
+| **Gemini CLI** | `npx skills add BeyondTechlabs/Vibe-check -g -a gemini-cli -y` |
+| **Several of these** | `npx skills add BeyondTechlabs/Vibe-check -g -a claude-code -a cursor -a codex -y` |
+| **Claude app** (desktop or claude.ai) | No terminal: [download `vibe-check.zip`](https://github.com/BeyondTechlabs/Vibe-check/releases/latest/download/vibe-check.zip) → **Settings → Customize → Skills → Add → Upload skill**. Keep it zipped |
+| **Replit** | In the Replit **Shell**: `npx skills add BeyondTechlabs/Vibe-check -a replit -y` |
+| **Lovable** | **Settings → Skills → Add → import from GitHub**, and paste `https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check` |
 | **Bolt, v0, ChatGPT** | No install: copy [`dist/vibe-check-lite.md`](dist/vibe-check-lite.md) (48 KB: every blocker) and paste it into the chat. If your tool accepts long files, the full [`dist/vibe-check.md`](dist/vibe-check.md) has everything |
 
 Then **open a new chat or session** in your app's folder and say: **"vibe check this app"** (in Replit and Lovable, type **`/vibe-check`**). That's it.
@@ -123,8 +123,8 @@ Then **open a new chat or session** in your app's folder and say: **"vibe check 
 ### 1. One command, with a menu to pick agents
 
 ```bash
-npx skills add vikneshchandrasekaran21/Vibe-check        # this project
-npx skills add vikneshchandrasekaran21/Vibe-check -g     # all your projects
+npx skills add BeyondTechlabs/Vibe-check        # this project
+npx skills add BeyondTechlabs/Vibe-check -g     # all your projects
 ```
 
 The [skills CLI](https://github.com/vercel-labs/skills) shows a menu of agents. Use **Space** to select the ones you use (for example **Claude Code**) and **Enter** to confirm.
@@ -157,7 +157,7 @@ Ready-made versions are in [`adapters/`](adapters). Copy the folder for your too
 
 ### 4. Claude app (desktop or claude.ai)
 
-1. Download **[vibe-check.zip](https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest/download/vibe-check.zip)** (it's also in [`dist/`](dist/vibe-check.zip)).
+1. Download **[vibe-check.zip](https://github.com/BeyondTechlabs/Vibe-check/releases/latest/download/vibe-check.zip)** (it's also in [`dist/`](dist/vibe-check.zip)).
 2. In Claude, open **Settings → Customize → Skills**.
 3. Click **Add → Upload skill** and pick the zip. Keep it zipped.
 4. Make sure the skill is switched on. Then in any chat or project, say *"vibe check this app"*, and attach your code or connect a folder so Claude can read it.
@@ -166,7 +166,7 @@ Ready-made versions are in [`adapters/`](adapters). Copy the folder for your too
 
 **Replit:** open the **Shell** in your Repl and run:
 ```bash
-npx skills add vikneshchandrasekaran21/Vibe-check -a replit -y
+npx skills add BeyondTechlabs/Vibe-check -a replit -y
 ```
 It installs into the project's `.agents/skills` folder, scripts included. A workspace admin can also upload the skill folder under **Workspace settings → Customization → Skills**. Then in the Agent chat, call it by name so the agent can't improvise its own "vibe check": type `/vibe-check run the full audit on the whole codebase`, or use **+ → Use a skill → vibe-check**.
 
@@ -174,7 +174,7 @@ It installs into the project's `.agents/skills` folder, scripts included. A work
 
 **Lovable:** a workspace owner or admin opens **Settings → Skills → Add**, chooses the GitHub import, and pastes:
 ```text
-https://github.com/vikneshchandrasekaran21/Vibe-check/tree/main/skills/vibe-check
+https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check
 ```
 Then in any project chat, type `/vibe-check run the full audit on the whole codebase`. Lovable's agent may not be able to run the helper scripts; when it can't, vibe-check does the inventory, sweep and counting by hand and says so in the report.
 
@@ -196,9 +196,9 @@ Installed skills don't update by themselves. **vibe-check tells you when a new v
 |---|---|
 | `npx skills add -g` (Claude Code, Codex, Cursor and others) | `npx skills update -g` |
 | Installed into a project (Replit) | `npx skills update -p` (in Replit, run it in the Shell) |
-| Lovable (imported from GitHub) | **Settings → Skills**: import again from `https://github.com/vikneshchandrasekaran21/Vibe-check/tree/main/skills/vibe-check` |
+| Lovable (imported from GitHub) | **Settings → Skills**: import again from `https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check` |
 | Replit (folder uploaded in Workspace settings) | Upload the new folder again |
-| The Claude app (zip) | Download `vibe-check.zip` from the [latest release](https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest) and upload it again |
+| The Claude app (zip) | Download `vibe-check.zip` from the [latest release](https://github.com/BeyondTechlabs/Vibe-check/releases/latest) and upload it again |
 | A copied rules or command file (Cursor, Copilot, Windsurf, Cline, Gemini CLI) | Copy the new file from [`adapters/`](adapters/) over the old one |
 | Paste-in (Bolt, v0, ChatGPT) | Paste the new [`dist/vibe-check-lite.md`](dist/vibe-check-lite.md) (or the full `dist/vibe-check.md`) |
 
@@ -281,10 +281,10 @@ Start at 🔴? Most people do. Fix, re-run, and post your before → after score
 Once there are no blockers, you can add your score badge to your README:
 
 ```markdown
-[![vibe-check score](https://img.shields.io/badge/vibe--check-91%2F100%20·%20Ready%20to%20scale-brightgreen)](https://github.com/vikneshchandrasekaran21/Vibe-check)
+[![vibe-check score](https://img.shields.io/badge/vibe--check-91%2F100%20·%20Ready%20to%20scale-brightgreen)](https://github.com/BeyondTechlabs/Vibe-check)
 ```
 
-[![vibe-check score](https://img.shields.io/badge/vibe--check-91%2F100%20·%20Ready%20to%20scale-brightgreen)](https://github.com/vikneshchandrasekaran21/Vibe-check)
+[![vibe-check score](https://img.shields.io/badge/vibe--check-91%2F100%20·%20Ready%20to%20scale-brightgreen)](https://github.com/BeyondTechlabs/Vibe-check)
 
 The report ends with a small "Checked with vibe-check" footer. Tell your agent *"no footer"* to remove it. It never adds anything to your app.
 
@@ -455,7 +455,7 @@ Edit only `skills/vibe-check/`, then run `python3 scripts/build.py` to regenerat
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md). The latest release is always on the [Releases](https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest) page.
+See [CHANGELOG.md](CHANGELOG.md). The latest release is always on the [Releases](https://github.com/BeyondTechlabs/Vibe-check/releases/latest) page.
 
 ## License
 

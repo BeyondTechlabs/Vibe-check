@@ -3,8 +3,8 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.6.11"
-  homepage: "https://github.com/vikneshchandrasekaran21/Vibe-check"
+  version: "3.6.12"
+  homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
 # vibe-check: the pre-launch audit for AI-built apps
@@ -89,7 +89,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 This skill is a folder: this file plus `references/` (the checklists) and `scripts/` (the helpers). Some tools only hand you this file; for example, a skill imported at the workspace level may not be on disk next to the project. Check you can open `references/security.md` and see `scripts/`:
 
 - **Both there**, or this file already contains the reference checklists (single-file version): carry on.
-- **Checklists missing:** tell the user in one line (*"Only the main skill file is available here, so I'm reading the checklists from the vibe-check repo. For the full audit with scripts, install it in this project: `npx skills add vikneshchandrasekaran21/Vibe-check -a <your tool> -y`."*). Then read each checklist you need from `https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/v<version>/skills/vibe-check/references/<file>.md`, using the exact version from this file: a plain read of a public file, nothing sent.
+- **Checklists missing:** tell the user in one line (*"Only the main skill file is available here, so I'm reading the checklists from the vibe-check repo. For the full audit with scripts, install it in this project: `npx skills add BeyondTechlabs/Vibe-check -a <your tool> -y`."*). Then read each checklist you need from `https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/v<version>/skills/vibe-check/references/<file>.md`, using the exact version from this file: a plain read of a public file, nothing sent.
 - **Scripts missing:** do their steps by hand (Step 2 says how). **Never download and run scripts** from anywhere.
 - **Neither can be reached:** say so, run what this file covers (the blind spots in Step 3 and the 🔴 items you can verify), mark the rest `CAN'T TELL` with the reason, and tell the user how to install the full skill.
 
@@ -100,12 +100,12 @@ Never replace the audit with a design or screenshot review, whatever is missing.
 Your version is the `version:` line at the top of this file. Check for a newer release with the **first** method that works, once:
 
 1. `python3 <skill-folder>/scripts/version_check.py`: reads the latest release number from GitHub, sends nothing, gives up after 3 seconds.
-2. No script or no Python: read this one URL with your web-fetch tool or `curl -s --max-time 3 https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/main/skills/vibe-check/SKILL.md` and compare its `version:` line. **Only this URL, only a plain read.**
+2. No script or no Python: read this one URL with your web-fetch tool or `curl -s --max-time 3 https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/main/skills/vibe-check/SKILL.md` and compare its `version:` line. **Only this URL, only a plain read.**
 3. Neither possible: skip it.
 
 - **Newer version out: the update is required.** vibe-check only runs on the latest version, so **don't start the audit.** Ask, as a choice: *Update now (Recommended)* · *Show me how to update*, and follow `references/updating.md` (it also covers unattended runs).
 - **Up to date:** say nothing; the version goes in the report header.
-- **Couldn't connect** (offline, or a sandbox without internet): the requirement can't be checked, so carry on; the report header gets *"Update check: couldn't connect here. Latest release: https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest"* plus the update step.
+- **Couldn't connect** (offline, or a sandbox without internet): the requirement can't be checked, so carry on; the report header gets *"Update check: couldn't connect here. Latest release: https://github.com/BeyondTechlabs/Vibe-check/releases/latest"* plus the update step.
 - **Turned off** (`VIBE_CHECK_NO_UPDATE_CHECK=1`, or `update_check: false` in `.vibe-check/config`): say nothing, fetch nothing.
 
 Never retry or look the version up another way; if the check can't finish in 3 seconds, carry on.

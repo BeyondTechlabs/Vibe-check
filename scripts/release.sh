@@ -13,7 +13,21 @@ V=$(sed -n 's/^ *version: *"\([0-9][0-9.]*\)".*/\1/p' skills/vibe-check/SKILL.md
 [ -n "$V" ] || { echo "Couldn't read the version from skills/vibe-check/SKILL.md"; exit 1; }
 grep -q "^## v$V " CHANGELOG.md || { echo "CHANGELOG.md has no '## v$V (date)' entry. Add one first."; exit 1; }
 command -v gh >/dev/null || { echo "Install the GitHub CLI first: brew install gh"; exit 1; }
-if gh release view "v$V" >/dev/null 2>&1; then
+
+# The repo lives at BeyondTechlabs/Vibe-check. If this copy still points at the old address, switch it
+# (keeping https or ssh, whichever you use), so pushes and releases always go to the right place.
+REPO="BeyondTechlabs/Vibe-check"
+ORIGIN=$(git remote get-url origin 2>/dev/null || true)
+if [ "$(printf %s "$ORIGIN" | tr '[:upper:]' '[:lower:]' | sed 's/\.git$//')" != "" ] && \
+   ! printf %s "$ORIGIN" | tr '[:upper:]' '[:lower:]' | grep -q "beyondtechlabs/vibe-check"; then
+  case "$ORIGIN" in
+    git@*) NEW="git@github.com:$REPO.git" ;;
+    *)     NEW="https://github.com/$REPO.git" ;;
+  esac
+  git remote set-url origin "$NEW"
+  echo "== This copy pointed at $ORIGIN; it now points at $NEW"
+fi
+if gh release view "v$V" -R "$REPO" >/dev/null 2>&1; then
   echo "Release v$V already exists. Bump the version in SKILL.md (and CHANGELOG.md) first."; exit 1
 fi
 
@@ -28,7 +42,7 @@ if git diff --cached --quiet; then echo "(nothing new to commit)"; else git comm
 git push -q
 
 NOTES=$(awk -v v="## v$V " 'index($0, v) == 1 {f=1; next} /^## v/ {f=0} f' CHANGELOG.md)
-gh release create "v$V" dist/vibe-check.zip --title "vibe-check v$V" --notes "$NOTES
+gh release create "v$V" -R "$REPO" dist/vibe-check.zip --title "vibe-check v$V" --notes "$NOTES
 
 ---
 **How to update:** run \`npx skills update -g\` (project installs such as Replit: \`npx skills update -p\`), then start a new session in your AI tool. vibe-check only runs on its latest version.
@@ -37,7 +51,7 @@ Other tools: copy the new file from \`adapters/\` (or \`dist/vibe-check.md\` for
 
 # install the new version on this Mac first, so a network blip in the tidy-up below can't leave you on the old one
 echo "== Installing v$V for Claude Code on this computer (global)"
-npx -y skills add vikneshchandrasekaran21/Vibe-check -g -a claude-code -y >/dev/null || echo "!! Couldn't install here. Run: npx skills update -g"
+npx -y skills add BeyondTechlabs/Vibe-check -g -a claude-code -y >/dev/null || echo "!! Couldn't install here. Run: npx skills update -g"
 INSTALLED=$(grep -m1 'version:' ~/.claude/skills/vibe-check/SKILL.md 2>/dev/null | sed 's/.*"\(.*\)".*/\1/')
 if [ "$INSTALLED" = "$V" ]; then echo "== Installed: v$INSTALLED at ~/.claude/skills/vibe-check"; else echo "!! Installed copy is v${INSTALLED:-none}, expected v$V. Run: npx skills update -g"; fi
 
@@ -45,8 +59,8 @@ if [ "$INSTALLED" = "$V" ]; then echo "== Installed: v$INSTALLED at ~/.claude/sk
 # their checklists from their own version tag (SKILL.md Step 0a), so a tag must never be deleted.
 # Optional tidy-up: a network error here must not fail the release.
 set +e
-OLD=$(gh release list --json tagName -q '.[].tagName' 2>/dev/null | grep -vx "v$V")
-for tag in $OLD; do gh release delete "$tag" --yes >/dev/null 2>&1 || echo "(couldn't delete old release $tag; harmless, try again later)"; done
+OLD=$(gh release list -R "$REPO" --json tagName -q '.[].tagName' 2>/dev/null | grep -vx "v$V")
+for tag in $OLD; do gh release delete "$tag" -R "$REPO" --yes >/dev/null 2>&1 || echo "(couldn't delete old release $tag; harmless, try again later)"; done
 set -e
 
 echo "== Done: v$V is on GitHub and installed here. Start a new session to use it."

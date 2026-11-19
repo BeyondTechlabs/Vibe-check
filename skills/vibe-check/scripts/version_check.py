@@ -29,9 +29,9 @@ import sys
 import urllib.request
 from pathlib import Path
 
-LATEST_RELEASE_URL = "https://api.github.com/repos/vikneshchandrasekaran21/Vibe-check/releases/latest"
-RELEASES_PAGE = "https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest"  # shown, never fetched
-FALLBACK_URL = "https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/main/skills/vibe-check/SKILL.md"
+LATEST_RELEASE_URL = "https://api.github.com/repos/BeyondTechlabs/Vibe-check/releases/latest"
+RELEASES_PAGE = "https://github.com/BeyondTechlabs/Vibe-check/releases/latest"  # shown, never fetched
+FALLBACK_URL = "https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/main/skills/vibe-check/SKILL.md"
 TIMEOUT = 3
 UPDATE_HOW = "vibe-check only runs on the latest version: update, then start a new session."
 

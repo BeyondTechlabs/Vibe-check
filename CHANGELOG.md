@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.12 (2026-11-19)
+
+**vibe-check has moved to github.com/BeyondTechlabs/Vibe-check.**
+- Every link, the install and update commands (`npx skills add BeyondTechlabs/Vibe-check`), the version check and the adapters now use the new address.
+- Installs from the old address keep working: GitHub redirects it, so the update check still finds new releases.
+- `release.sh` points a local copy at the new address if it still uses the old one (keeping https or ssh), and names the repo explicitly for every release command.
+
 ## v3.6.11 (2026-11-14)
 
 **"Check these yourself" is a last resort, not a dumping ground.** A real run had 0 questions and 288 check-yourself items. About 100 could have been settled from the code or the database, and about 55 were questions in disguise.

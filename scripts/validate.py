@@ -152,9 +152,9 @@ for s in ["inventory.py", "sweep.py", "coverage.py", "versions.py", "profile.py"
     for cmd in re.findall(r"subprocess\.(?:run|Popen|call|check_output)\(\s*\[\s*\"([^\"]+)\"", src):
         if cmd != "git": err(f"scripts/{s} runs '{cmd}': helper scripts may only run read-only git commands")
 vc = (SCRIPTS / "version_check.py").read_text() if (SCRIPTS / "version_check.py").exists() else ""
-allowed = {"https://api.github.com/repos/vikneshchandrasekaran21/Vibe-check/releases/latest",
-           "https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest",  # shown to the user, never fetched
-           "https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/main/skills/vibe-check/SKILL.md"}
+allowed = {"https://api.github.com/repos/BeyondTechlabs/Vibe-check/releases/latest",
+           "https://github.com/BeyondTechlabs/Vibe-check/releases/latest",  # shown to the user, never fetched
+           "https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/main/skills/vibe-check/SKILL.md"}
 for url in set(re.findall(r"https?://[^\s\"')]+", vc)):
     if url not in allowed: err(f"version_check.py contains a URL outside the two allowed GitHub URLs: {url}")
 for bad, why in [(r"\bdata\s*=", "sends a request body"), (r"method\s*=", "uses a non-GET method"),
@@ -166,7 +166,7 @@ for must in ["VIBE_CHECK_NO_UPDATE_CHECK", "update_check", "timeout=TIMEOUT", "T
     if must not in vc: err(f"version_check.py is missing '{must}'")
 for must in ["## Step 0: Version check", "scripts/version_check.py", "VIBE_CHECK_NO_UPDATE_CHECK", "carry on",
              "Never send the user's code or data anywhere", "Never retry", "curl -s --max-time 3",
-             "https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/main/skills/vibe-check/SKILL.md",
+             "https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/main/skills/vibe-check/SKILL.md",
              "couldn't connect", "npx skills update -g", "Lovable", "Claude app", "adapters/", "dist/vibe-check.md"]:
     if must not in skill: err(f"SKILL.md is missing '{must}' (version check / privacy rule)")
 for must in ["v<installed>", "A newer vibe-check is out", "Update check:** couldn't connect here", "releases/latest", "`HOW:` line from version_check.py"]:
@@ -212,7 +212,7 @@ except Exception as e:
     err(f"SKILL.md frontmatter isn't valid YAML: {e}")
 if not desc or "Not a design review" not in desc.group(1): err("SKILL.md description must say 'Not a design review'")
 for must in ["Running vibe-check v<version>", "## Step 0a: Make sure you have the whole skill", "Never download and run scripts",
-             "https://raw.githubusercontent.com/vikneshchandrasekaran21/Vibe-check/v<version>/skills/vibe-check/references/",
+             "https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/v<version>/skills/vibe-check/references/",
              "never a look at the preview", "Never replace the audit with a design or screenshot review"]:
     if must not in skill: err(f"SKILL.md is missing '{must}' (start line / whole-skill check)")
 import os as _os
@@ -575,7 +575,7 @@ for claim, real in [(r"(\d+) AI blind[- ]spot", len(nums)), (r"for (\d+) risky p
     for m in re.finditer(claim, readme):
         if int(m.group(1)) != real: err(f"README.md says '{m.group(0)}' but the real number is {real}")
 for must in ["npx skills update -g", "VIBE_CHECK_NO_UPDATE_CHECK", "## 🔄 Updating", "-a replit", "/vibe-check run the full audit", "Running vibe-check v",
-             "https://github.com/vikneshchandrasekaran21/Vibe-check/tree/main/skills/vibe-check"]:
+             "https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check"]:
     if must not in readme: err(f"README.md is missing '{must}' (updating / version check)")
 if re.search(r"phone home|nothing (?:is )?sent anywhere", readme, re.I) and "version check" not in readme.lower():
     err("README.md promises it never contacts anything, but doesn't mention the version check")

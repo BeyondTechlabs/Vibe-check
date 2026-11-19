@@ -23,7 +23,7 @@ Use this structure. Keep it skimmable. Plain words first, technical details seco
 
 > ⬆️ **A newer vibe-check is out** (v<latest>; this check ran on v<installed>). <the `HOW:` line from version_check.py>, then start a new session. *(Only if Step 0 found a newer version.)*
 
-> **Update check:** couldn't connect here. Latest release: https://github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · <the `HOW:` line from version_check.py>. *(Only if Step 0 couldn't connect; leave out if up to date or turned off.)*
+> **Update check:** couldn't connect here. Latest release: https://github.com/BeyondTechlabs/Vibe-check/releases/latest · <the `HOW:` line from version_check.py>. *(Only if Step 0 couldn't connect; leave out if up to date or turned off.)*
 
 **vibe-check:** v<installed> · **Skill files:** complete | checklists read from GitHub, scripts done by hand · **Date:** <date> · **Level:** Quick | Full | Enterprise · **Profile:** <users, minors?, payments?, sensitive data?, regions> · **Stack:** <framework, DB, auth, hosting, payments, AI>
 **Modules run:** <list> · **Method notes:** <e.g. "license scan via lockfile (scanner blocked)", "click-through via Playwright on staging">
@@ -228,7 +228,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 <only when there are no blockers: the badge snippet; only for 🟢: the ⭐ line, see below>
 
 ---
-<sub>Checked with vibe-check · github.com/vikneshchandrasekaran21/Vibe-check</sub>
+<sub>Checked with vibe-check · github.com/BeyondTechlabs/Vibe-check</sub>
 ````
 
 ## The six symbols (everywhere: report, chat, fixes)
@@ -249,7 +249,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -264,7 +264,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.11 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -366,13 +366,13 @@ One line, in a `text` code block, so it screenshots cleanly:
 Offer this snippet for the user's README. **Don't add it yourself** unless the user says yes (scope guard):
 
 ```markdown
-[![vibe-check score](https://img.shields.io/badge/vibe--check-<score>%2F100%20·%20<band>-<color>)](https://github.com/vikneshchandrasekaran21/Vibe-check)
+[![vibe-check score](https://img.shields.io/badge/vibe--check-<score>%2F100%20·%20<band>-<color>)](https://github.com/BeyondTechlabs/Vibe-check)
 ```
 
 Replace `<score>`, `<band>` (spaces as `%20`) and `<color>`: `brightgreen` for Ready to scale, `green` for Ready to launch, `yellow` for Needs work. `%2F` is the slash. Add the date in the alt text if they want it.
 
 ### Star request (only for 🟢, once)
-One line, after the badge: *"If vibe-check helped, a ⭐ on https://github.com/vikneshchandrasekaran21/Vibe-check helps others find it."* Don't repeat it in the same session, and never show it for 🟡 or 🔴.
+One line, after the badge: *"If vibe-check helped, a ⭐ on https://github.com/BeyondTechlabs/Vibe-check helps others find it."* Don't repeat it in the same session, and never show it for 🟡 or 🔴.
 
 ### Footer (always, removable)
-The last line of the saved report: `<sub>Checked with vibe-check v<installed> · latest: github.com/vikneshchandrasekaran21/Vibe-check/releases/latest · update: <the exact command from the `HOW:` line of version_check.py, e.g. `npx skills update -g`></sub>`. Leave it out if the user has asked for no footer (or `.vibe-check/config` contains `footer: false`). Never add it to the user's app, pages or code, only to the report.
+The last line of the saved report: `<sub>Checked with vibe-check v<installed> · latest: github.com/BeyondTechlabs/Vibe-check/releases/latest · update: <the exact command from the `HOW:` line of version_check.py, e.g. `npx skills update -g`></sub>`. Leave it out if the user has asked for no footer (or `.vibe-check/config` contains `footer: false`). Never add it to the user's app, pages or code, only to the report.
