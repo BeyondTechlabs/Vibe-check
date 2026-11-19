@@ -27,11 +27,15 @@ Usage:
     --remaining  list what is left to check (use it to resume a long run)
     --save       after a complete count, keep this run in .vibe-check/history/ so the next run can compare
     --check-list print the check-yourself items grouped by place (one visit per place), for the report
+    --carry      before the helpers start: carry over every check whose wording and cited files are unchanged since the
+                 last saved run (ledger.d/00-carried.md), and list the rest in .vibe-check/redo.md
   Every count also writes .vibe-check/results.json (score, band, totals, areas, every check's status).
 Exit code 0 = complete, 1 = gaps found. Python 3.8+, standard library only.
 """
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -262,7 +266,9 @@ def compute_result(required, results, checks, level, date):
                    "on_your_word": sum(1 for c in required if status_of(c, results, checks) == "PASS" and is_on_word(results[c][1])), "not_done": counts["TODO"], "checked": applicable - counts["TODO"],
                    "questions": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask"),
                    "check_yourself": sum(1 for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check"),
-                   "check_places": len(check_groups(required, results, checks))},
+                   "check_places": len(check_groups(required, results, checks)),
+                   "carried": sum(1 for c in required if c in results and results[c][1].lstrip().startswith("CARRIED")),
+                   "by_script": sum(1 for c in required if c in results and results[c][1].lstrip().startswith("AUTO"))},
         "areas": areas,
         "blockers": [{"id": c, "name": checks[c][2]} for c in required if status_of(c, results, checks) == "BLOCKER"],
         "checks": {c: status_of(c, results, checks) for c in required},
@@ -388,6 +394,7 @@ def print_result(res, diff):
         print(f"| ❗ Not checked yet | {t['not_done']} |")
     tail = "✅ nothing skipped" if not t["not_done"] else f"❗ {t['not_done']} not checked"
     print(f"| **Checked** | **{t['checked']} of {t['apply']}** · {tail} |\n")
+    print(savings_line(t) + "\n")
     print("| Area | Score | Passed | ❌ Must fix | ⚠️ Should fix | ❓ Your answer |\n|---|---|---|---|---|---|")
     for a in res["areas"]:
         if not a["applies"]:
@@ -398,6 +405,196 @@ def print_result(res, diff):
               f"{dash(a['should'], '⚠️')} | {dash(a['ask'], '❓')} |")
     print()
 
+
+
+# ---- v3.7: carry over unchanged checks, and checks settled by autocheck.py ----
+CARRY_RX = re.compile(r"^\s*CARRIED from ([\d-]+) run \(([\w.-]+)\):\s*(.*)$", re.S)
+_auto_cache = {}
+_hist_cache = {}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha1(b).hexdigest()[:16]
+
+
+def item_hashes():
+    """A fingerprint of every check's wording, so a check whose text changed is always redone."""
+    out = {}
+    refs = SKILL / "references"
+    bs = refs / "blind-spots.md"
+    if bs.exists():
+        for m in re.finditer(r"^\| (BS-\d{2}) \|(.*)$", bs.read_text("utf-8"), re.M):
+            out[m.group(1)] = _sha(m.group(2).encode())
+    for f in sorted(refs.glob("*.md")):
+        for m in re.finditer(r"^- \[ \] (🔴|🟡|🟢) ([A-Z0-9]+-\d{3}) (.*)$", f.read_text("utf-8"), re.M):
+            out[m.group(2)] = _sha((m.group(1) + m.group(3)).encode())
+    return out
+
+
+def file_hash(root: Path, rel: str):
+    try:
+        return _sha((root / rel).read_bytes())
+    except OSError:
+        return None
+
+
+DOT_REF_RX = re.compile(r"(?<![\w/.@-])((?:[\w@()\[\].-]+/)*(?:\.[\w][\w.-]*|Gemfile|Rakefile|Procfile|Dockerfile|Makefile|"
+                        r"Brewfile|Podfile|Jenkinsfile|Containerfile|LICENSE|CODEOWNERS)):(\d+)")
+
+
+def cited_files(ev: str, root: Path):
+    """The project files a piece of evidence cites, or None if one of them can't be found."""
+    out = set()
+    for m in list(REF_RX.finditer(ev)) + list(DOT_REF_RX.finditer(ev)):
+        path, problem = resolve_cited(root, m.group(1))
+        if path is None:
+            return None
+        try:
+            out.add(path.relative_to(root.resolve()).as_posix())
+        except ValueError:
+            return None
+    return sorted(out)
+
+
+def profile_hash(vc: Path):
+    """Which modules apply, from profile.json and any answers that added one."""
+    try:
+        mods = sorted(json.loads((vc / "profile.json").read_text("utf-8")).get("modules_with_evidence", {}))
+    except (OSError, ValueError):
+        mods = None
+    ans = (vc / "answers.md").read_text("utf-8") if (vc / "answers.md").exists() else ""
+    adds = sorted(re.findall(r"^\s*[-*]?\s*ADDS:\s*([\w-]+)", ans, re.M))
+    return _sha(json.dumps([mods, adds]).encode())
+
+
+NO_CARRY = re.compile(r"(?<![\w./-])(?:SQL|screenshot|ANSWER|AUTO|CARRIED|CHECK|ASK)\s*:|`(?:npm|pnpm|yarn|npx|bun|curl|pip|pip-audit|osv-scanner|"
+                      r"trivy|semgrep|nuclei|cargo|govulncheck|lighthouse|gh|supabase|firebase|vercel|wrangler)\b", re.I)
+
+
+def carry_reason(cid, prev, items_now, root, vc):
+    """None if a check from the previous run can be carried over unchanged, else why not."""
+    got = prev.get("carry", {}).get("evidence", {}).get(cid)
+    if not got:
+        return "it wasn't a pass or N/A last time"
+    status, ev = got
+    if prev["carry"].get("items", {}).get(cid) != items_now.get(cid):
+        return "the check's wording changed in this version"
+    if NO_CARRY.search(ev):
+        return "its evidence is a command, query, screenshot or answer, which is redone each time"
+    files = cited_files(ev, root)
+    if files is None:
+        return "a file it cites is gone"
+    if not files:
+        if status == "N/A" and prev["carry"].get("profile") == profile_hash(vc):
+            return None
+        return "its evidence cites no file to prove it's unchanged"
+    for rel in files:
+        old = prev["carry"].get("files", {}).get(rel)
+        if old is None or old != file_hash(root, rel):
+            return f"{rel} changed"
+    return None
+
+
+def load_run(hist_dir: Path, run_id: str):
+    if run_id not in _hist_cache:
+        f = hist_dir / f"{run_id}.json"
+        try:
+            _hist_cache[run_id] = json.loads(f.read_text("utf-8"))
+        except (OSError, ValueError):
+            _hist_cache[run_id] = None
+    return _hist_cache[run_id]
+
+
+def autocheck_settle(root: Path):
+    key = str(root)
+    if key not in _auto_cache:
+        spec = importlib.util.spec_from_file_location("vc_autocheck", Path(__file__).resolve().parent / "autocheck.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _auto_cache[key] = mod.settle(root)
+    return _auto_cache[key]
+
+
+def verify_script_row(key, r, ev, root, vc):
+    """AUTO rows must match what autocheck.py says now; CARRIED rows must prove their files are unchanged."""
+    if re.match(r"^\s*AUTO\b", ev):
+        now = autocheck_settle(root).get(key)
+        if not now:
+            return [f"{key}: autocheck.py doesn't settle this check here any more: re-run autocheck.py and check it yourself"]
+        if now[0] != r or now[1].strip() != ev.strip():
+            return [f"{key}: AUTO rows come only from autocheck.py, which now says '{now[0]}: {now[1][:80]}': re-run autocheck.py"]
+        return []
+    m = CARRY_RX.match(ev)
+    if not m:
+        return [f"{key}: carried rows are written by 'coverage.py --carry' only"]
+    prev = load_run(vc / "history", m.group(2))
+    if not prev or "carry" not in prev:
+        return [f"{key}: carried from run {m.group(2)}, which isn't in .vibe-check/history/: check it again"]
+    why = carry_reason(key, prev, item_hashes(), root, vc)
+    if why:
+        return [f"{key}: can't carry it over: {why}. Check it again"]
+    if prev["carry"]["evidence"][key][0] != r or prev["carry"]["evidence"][key][1].strip() != m.group(3).strip():
+        return [f"{key}: a carried row must keep its result and evidence exactly as in run {m.group(2)}"]
+    return []
+
+
+def write_carry(ledger_path: Path):
+    """--carry: write ledger.d/00-carried.md and redo.md from the newest saved run."""
+    vc = ledger_path.parent
+    root = vc.resolve().parent
+    hist = sorted((vc / "history").glob("*.json")) if (vc / "history").exists() else []
+    prev = None
+    for f in reversed(hist):
+        data = load_run(vc / "history", f.stem)
+        if data and "carry" in data:
+            prev, run_id = data, f.stem
+            break
+    order, checks, _ = load_checklist()
+    (vc / "ledger.d").mkdir(parents=True, exist_ok=True)
+    if not prev:
+        (vc / "ledger.d" / "00-carried.md").write_text("# Nothing carried over: no earlier complete run with file proofs\n", "utf-8")
+        print("carry: no earlier saved run to carry from (runs saved by v3.7+ only): every check is checked fresh")
+        return 0
+    items_now = item_hashes()
+    date = run_id[:10]
+    rows, why_not = [], {}
+    for cid in checks:
+        why = carry_reason(cid, prev, items_now, root, vc)
+        if why is None:
+            status, ev = prev["carry"]["evidence"][cid]
+            rows.append(f"| {cid} | {status} | CARRIED from {date} run ({run_id}): {ev} |")
+        else:
+            why_not[cid] = why
+    head = ["# Carried over unchanged from the run of " + date + " (written by coverage.py --carry; don't edit).",
+            "# Each row is re-proved when coverage.py counts: its check didn't change and the files it cites are byte-for-byte the same.",
+            "", "| ID | Result | Evidence |", "|---|---|---|"]
+    (vc / "ledger.d" / "00-carried.md").write_text("\n".join(head + rows) + "\n", "utf-8")
+    redo = ["# Checks to do in this run (everything not carried over)", "",
+            f"Carried over from {date}: {len(rows)}. To do: {len(why_not)}. A helper does only its module's IDs below.", ""]
+    for mod in order:
+        ids = [c for c in checks if checks[c][0] == mod and c in why_not]
+        if ids:
+            redo.append(f"## {mod} ({len(ids)})")
+            redo.append(", ".join(ids))
+            redo.append("")
+    changed = sorted({w for w in why_not.values() if w.endswith(" changed")})
+    if changed:
+        redo += ["## Files changed since then", ""] + [f"- {w[:-8]}" for w in changed] + [""]
+    (vc / "redo.md").write_text("\n".join(redo), "utf-8")
+    tally = {}
+    for w in why_not.values():
+        k = "a cited file changed" if w.endswith(" changed") else w
+        tally[k] = tally.get(k, 0) + 1
+    print(f"carry: {len(rows)} checks carried over from the run of {date}; {len(why_not)} to do -> .vibe-check/redo.md")
+    for k, v in sorted(tally.items(), key=lambda kv: -kv[1]):
+        print(f"  {v} to do because {k}")
+    print(f"  files changed since then: {len(changed)}")
+    return 0
+
+
+def savings_line(t):
+    redone = t["checked"] - t.get("carried", 0) - t.get("by_script", 0)
+    return f"Checks redone: {redone} · carried over: {t.get('carried', 0)} · settled by script: {t.get('by_script', 0)}"
 
 
 def load_checklist():
@@ -589,6 +786,8 @@ def main() -> int:
         i = argv.index("--verify-report"); report_path = Path(argv[i + 1]); del argv[i:i + 2]
     args = [a for a in argv if not a.startswith("--")]
     ledger_path = Path(args[0] if args else ".vibe-check/ledger.md")
+    if "--carry" in argv or "--carry" in sys.argv:
+        return write_carry(ledger_path)
     if not ledger_path.exists():
         print(f"No ledger at {ledger_path}. Create it first (see SKILL.md Step 4).")
         return 1
@@ -682,6 +881,10 @@ def main() -> int:
             errors.append(f"{key}: this pass rests on the user's answer: write it 'ANSWER: <answer> · code: <what you checked>' "
                           f"(shown as ✅ per your answer), or cite the code that proves it")
         on_word = r == "PASS" and is_on_word(ev)
+        by_script = bool(re.match(r"^\s*(AUTO|CARRIED)\b", ev)) and r in ("PASS", "FAIL", "N/A")
+        if by_script:
+            errors.extend(verify_script_row(key, r, ev, root, ledger_path.parent))
+            on_word = True    # proved by the script, not by a quote
         if r in ("PASS", "FAIL") and not on_word:
             evidence_problems += check_evidence(key, ev, root)
         if r in ("PASS", "FAIL") and not on_word and not CHECKABLE.search(ev):
@@ -1079,6 +1282,9 @@ def main() -> int:
             if unasked:
                 errors.append(f"REPORT: {len(unasked)} question(s) weren't asked ({', '.join(unasked[:6])}…): ask them as choices before the "
                               "report and record each answer, or that the user skipped it, in .vibe-check/answers.md")
+            # v3.7: the report says how much was redone, carried over and settled by script
+            if savings_line(T) not in rep_text:
+                errors.append(f"REPORT: add this line under the Checks table, exactly as coverage.py prints it: '{savings_line(T)}'")
             # check-yourself items: all listed in the report, grouped by place
             missing_chk = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "check" and c not in rep_text]
             if missing_chk:
@@ -1135,6 +1341,18 @@ def main() -> int:
             hist_dir.mkdir(exist_ok=True)
             from datetime import datetime
             name = datetime.now().strftime("%Y-%m-%d-%H%M%S-%f") + ".json"
+            carry = {"evidence": {}, "files": {}, "items": item_hashes(), "profile": profile_hash(ledger_path.parent)}
+            for c in required:
+                if c in results and results[c][0] in ("PASS", "N/A"):
+                    ev = results[c][1]
+                    cm = CARRY_RX.match(ev)
+                    ev = cm.group(3) if cm else ev
+                    if re.match(r"^\s*AUTO\b", ev):
+                        continue          # autocheck.py settles these again every run (cheap)
+                    carry["evidence"][c] = [results[c][0], ev]
+                    for rel in (cited_files(ev, root) or []):
+                        carry["files"][rel] = file_hash(root, rel)
+            res["carry"] = carry
             (hist_dir / name).write_text(json.dumps(res, indent=1, ensure_ascii=False) + "\n")
             print(f"saved to history: {hist_dir / name} (the next run compares with it)")
     return 0 if not errors else 1

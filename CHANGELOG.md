@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.7.0 (2026-11-19)
+
+**Fewer tokens per run, with the same checks.**
+- **Re-check only what changed.** `coverage.py --save` now records, for every pass and N/A, its evidence, a fingerprint of the check's wording, and a hash of every file it cites. On the next run, `coverage.py --carry` carries a check over only when its wording and all its cited files are byte-for-byte unchanged. The rest goes to `.vibe-check/redo.md`, with the reason each check has to be redone.
+  - Always redone: anything that failed or was open last time, checks whose evidence is a command, query, screenshot or answer, and new or reworded checks.
+  - `coverage.py` re-proves every carried row at each count, and rejects one whose files changed, which was edited, or which was typed by hand.
+  - Say "full re-run" to skip carrying.
+- **One shared code map.** The new `codemap.py` lists every code file's size and the names it defines, and, for each module, the files and line numbers where its topics appear. Helpers get their module's part (`codemap.py --module security`) and open only those lines, instead of re-reading the project.
+- **Checks a script can decide.** The new `autocheck.py` settles SUP-001, SEC-050, OPS-005, OPS-001, MNT-007, REL-043 and UX-016, but only when the answer is certain from the files (no lockfile, no CI config, no README, no robots.txt or sitemap…). Anything that needs judgement stays with the helpers. `coverage.py` re-runs the rule at each count, so an `AUTO:` row can't be typed or go stale.
+- **Lighter helpers.** Each helper gets only its module, its IDs from `redo.md` and its part of the code map. Where the tool lets you pick a helper's model, simple modules may use a faster one; blind spots, security, payments, the hunt and the re-check always stay on the strongest.
+- **You can see the saving:** the Checks table is followed by *Checks redone: X · carried over: Y · settled by script: Z*, and the report must include it.
+
 ## v3.6.12 (2026-11-19)
 
 **vibe-check has moved to github.com/BeyondTechlabs/Vibe-check.**

@@ -400,6 +400,21 @@ for _name, _txt, _musts in [("ledger.md", _led, ["**Settle it yourself first; `C
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.6.11)")
 
+# 31. v3.7 fewer tokens: carry over unchanged checks, a code map, script-settled checks, lighter helpers
+for _must in ["def write_carry(", "def carry_reason(", "def verify_script_row(", "def savings_line(", "item_hashes()", "\"carry\"", "--carry"]:
+    if _must not in _cov: err(f"coverage.py is missing '{_must}' (v3.7)")
+for _f, _musts in [("codemap.py", ["TOPICS", "--module", "codemap.json"]), ("autocheck.py", ["RULES", "def settle(", "01-auto.md"])]:
+    _src = (SK / "scripts" / _f).read_text() if (SK / "scripts" / _f).exists() else ""
+    for _m in _musts:
+        if _m not in _src: err(f"{_f} is missing '{_m}' (v3.7)")
+    if re.search(r"^\s*(import|from)\s+(requests|urllib|http|socket)\b", _src, re.M): err(f"{_f} must never touch the network")
+for _name, _txt, _musts in [("SKILL.md", skill_main, ["codemap.py", "autocheck.py", "coverage.py --carry", ".vibe-check/redo.md", "full re-run"]),
+                            ("helper-brief.md", _hb, ["redo.md", "codemap.py --module"]),
+                            ("ledger.md", _led, ["`AUTO:`", "CARRIED from"]),
+                            ("report-template.md", _tpl, ["Checks redone:"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.7)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -580,7 +595,7 @@ for must in ["npx skills update -g", "VIBE_CHECK_NO_UPDATE_CHECK", "## 🔄 Upda
 if re.search(r"phone home|nothing (?:is )?sent anywhere", readme, re.I) and "version check" not in readme.lower():
     err("README.md promises it never contacts anything, but doesn't mention the version check")
 
-for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "test_scripts.py", "release.sh"]:
+for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "codemap.py", "autocheck.py", "test_scripts.py", "release.sh"]:
     if f not in readme: err(f"README.md repo layout doesn't list {f}")
 for link in re.findall(r"\]\((?!https?://|#|mailto:)([^)]+)\)", readme):
     if not (ROOT / link.split("#")[0]).exists(): err(f"README.md links to missing file: {link}")

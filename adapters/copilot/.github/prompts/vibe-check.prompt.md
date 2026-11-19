@@ -21,11 +21,11 @@ The **first line of every vibe-check reply** is: `Running vibe-check v<version> 
 
 **Steps 0a and 0 come first** (they need no project, and an update notice must reach the user before any question). Then:
 
-1. Run `python3 <skill-folder>/scripts/profile.py . --where` from the folder you were opened in. It prints the project's name, path and branch and whether there's app code here, and writes nothing. Without the script, look for `package.json`, `requirements.txt`, `composer.json`, `go.mod`, `supabase/` or code files, in this folder only.
+1. Run `python3 <skill-folder>/scripts/profile.py . --where` from the folder you were opened in (read-only: name, path, branch, whether there's app code). Without the script, look for `package.json`, `requirements.txt`, `go.mod`, `supabase/` or code files, in this folder only.
 2. **Inside a project (app code found): review it straight away.** It's the folder you're in: name in the first line, path and branch in the report header.
 3. **Not inside a project** (no app code: a new chat with no folder, a home, Downloads or Desktop folder, an empty folder): **ask which project, as a choice**: up to 3 project folders your tool already shows you (open or recently used), then *I'll type the folder path* · *Not sure where it is* (then say how to open its folder). Never scan the disk for candidates, and never guess.
 4. **Never search outside the project folder to find an app**: not Downloads, Desktop, Documents, other projects or the whole disk. Look only where the user points.
-5. **One project per run.** Names or projects mentioned earlier in the chat, in memory or elsewhere are **never** a reason to switch project. If this chat already checked another project, say so in one line and reuse none of its findings, ledger or answers; each project's notes live in its own `.vibe-check/`.
+5. **One project per run.** Projects mentioned earlier in the chat or in memory are **never** a reason to switch. If this chat already checked another project, say so in one line and reuse none of its findings, ledger or answers.
 
 ## Run checklist: copy it into your reply and tick it off
 
@@ -35,7 +35,7 @@ vibe-check run
 - [ ] Step 0   Latest version confirmed (or updated first)
 - [ ] Project  profile.py --where: this folder, or the one the user named
 - [ ] Step 1   profile.py run; remaining questions asked as choices
-- [ ] Step 2   inventory.py, sweep.py and versions.py run
+- [ ] Step 2   inventory.py, sweep.py, versions.py, codemap.py, autocheck.py and `coverage.py --carry` run
 - [ ] Step 3   All 19 blind spots checked (references/blind-spots.md)
 - [ ] Step 4   Every module that applies checked into the ledger
 - [ ] Step 4a  Hunt done (Full and Enterprise)
@@ -75,7 +75,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
-10. **Fresh evidence every run.** Earlier findings (in this chat or `.vibe-check/reports/`) are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
+10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps a pass or N/A whose check and cited files are unchanged (re-proved at every count); skip it when the user asks for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
 12. **No facts from memory.** Legal, regulatory, platform-policy and pricing statements come from this skill's reference files or a source you opened during this run (give the URL), never from memory. If unsure, make it a question for the user or the lawyer list.
 15. **Never go quiet.** Post a short line when each step or helper starts and finishes, and every couple of minutes during long work. Time-limit long commands.
@@ -84,14 +84,14 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 
 ## Step 0a: Make sure you have the whole skill
 
-This skill is a folder: this file plus `references/` (the checklists) and `scripts/` (the helpers). Some tools only hand you this file; for example, a skill imported at the workspace level may not be on disk next to the project. Check you can open the **security** section below and see `scripts/`:
+This skill is a folder: this file, `references/` (the checklists) and `scripts/`. Some tools hand you only this file. Check you can open the **security** section below and see `scripts/`:
 
 - **Both there**, or this file already contains the reference checklists (single-file version): carry on.
-- **Checklists missing:** tell the user in one line (*"Only the main skill file is available here, so I'm reading the checklists from the vibe-check repo. For the full audit with scripts, install it in this project: `npx skills add BeyondTechlabs/Vibe-check -a <your tool> -y`."*). Then read each checklist you need from `https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/v<version>/skills/vibe-check/references/<file>.md`, using the exact version from this file: a plain read of a public file, nothing sent.
+- **Checklists missing:** say so in one line (*"Only the main skill file is available here, so I'm reading the checklists from the vibe-check repo. For the full audit with scripts: `npx skills add BeyondTechlabs/Vibe-check -a <your tool> -y`."*), then read each checklist you need from `https://raw.githubusercontent.com/BeyondTechlabs/Vibe-check/v<version>/skills/vibe-check/references/<file>.md` (this file's exact version): a plain read of a public file, nothing sent.
 - **Scripts missing:** do their steps by hand (Step 2 says how). **Never download and run scripts** from anywhere.
-- **Neither can be reached:** say so, run what this file covers (the blind spots in Step 3 and the 🔴 items you can verify), mark the rest `CAN'T TELL` with the reason, and tell the user how to install the full skill.
+- **Neither can be reached:** say so, run the blind spots (Step 3) and the 🔴 items you can verify, mark the rest `CAN'T TELL` with the reason, and say how to install the full skill.
 
-Never replace the audit with a design or screenshot review, whatever is missing. Put the result in the report header: *Skill files: complete* or *checklists read from GitHub, scripts done by hand*.
+Never replace the audit with a design or screenshot review. Header: *Skill files: complete* or *checklists read from GitHub, scripts done by hand*.
 
 ## Step 0: Version check (a few seconds)
 
@@ -140,22 +140,26 @@ Then the **level**. If the user named one, use it ("launch" means Full). Otherwi
 python3 <skill-folder>/scripts/inventory.py .            # lists every page, route, function, form, button, env var, table, bucket…
 python3 <skill-folder>/scripts/sweep.py . --history      # searches every file (and git history) for risky patterns
 python3 <skill-folder>/scripts/versions.py .             # lists the runtime, frameworks, CMS, plugins, images and key packages, with exact versions
+python3 <skill-folder>/scripts/codemap.py .              # where each module's topics are (file:lines)
+python3 <skill-folder>/scripts/autocheck.py .            # settles what a script can decide for certain
+python3 <skill-folder>/scripts/coverage.py --carry       # keeps unchanged checks; lists the rest in redo.md
 ```
 
 - `.vibe-check/inventory.md` is your **checklist of things in the app.** Bugs hide in the one route nobody opened, so every item in it must be checked, and the report shows counts like *API routes checked: 47/47*. The script finds the common patterns; **add anything it missed** (and raise the "found" count).
 - `.vibe-check/sweep.md` lists every risky-pattern match, with secrets masked. Each hit is a **lead, not a finding**: give every hit a verdict in the ledger after the second look.
 - `.vibe-check/versions.md` lists **everything the app runs, with exact versions**, and the audit tool for each ecosystem. Every component gets a `V-` row in the ledger with a verdict (`CURRENT`, `OUTDATED`, `EOL`, `VULNERABLE` or `CAN'T TELL`) and the source URL opened during the run, or the audit tool that checked it (the **vulnerabilities** section below). Versions are never judged from memory.
-- **If the scripts aren't available or Python can't run** (single-file versions for other tools, some builder platforms), do both by hand: list the inventory categories from `inventory.py`'s list yourself, search for the blind-spot #3 patterns and the patterns in the **sweep-patterns** section below, and write *"coverage counted by hand: scripts couldn't run"* in the report.
+- **Do only the checks in `.vibe-check/redo.md`**; carried and AUTO rows are done.
+- **If the scripts aren't available or Python can't run** (single-file versions for other tools, some builder platforms), do it by hand: list the inventory categories from `inventory.py`'s list yourself, search for the blind-spot #3 patterns and the patterns in the **sweep-patterns** section below, and write *"coverage counted by hand: scripts couldn't run"* in the report.
 
 Then write down:
 - **Stack:** framework and version, hosting, DB, auth, payments, email, storage, AI providers, analytics, every third-party API.
-- **Builder platform:** Lovable, Bolt, v0, Replit, Cursor, Claude Code and so on.
-- **Data map:** every piece of personal data (forms, uploads, photo metadata such as GPS, logs, analytics, data sent to LLMs). For each, record where it's stored, which third parties get it, and how long it's kept.
+- **Builder platform:** Lovable, Bolt, v0, Replit, Cursor, Claude Code…
+- **Data map:** every piece of personal data (forms, uploads, photo GPS, logs, analytics, data sent to LLMs): where it's stored, which third parties get it, how long it's kept.
 - **Entry points:** pages, API routes, server actions, edge functions, webhooks, cron, workers, admin pages.
-- **Tables, collections and buckets**, with their access rules.
-- **Env vars**, and whether each one reaches the browser.
+- **Tables, collections, buckets**, with access rules.
+- **Env vars**, and which reach the browser.
 - **Live URLs:** production, staging, dev, preview and platform default domains (for example `*.workers.dev`, `*.vercel.app`).
-- **Known issues:** read `.vibe-check/reports/`, `TODO`, project notes and `CLAUDE.md` / `AGENTS.md`. Mark findings that were already known as *(already known)*.
+- **Known issues:** read `.vibe-check/reports/`, `TODO`, project notes and `CLAUDE.md` / `AGENTS.md`; mark those findings *(already known)*.
 
 ## Step 3: AI blind spots (every level)
 
@@ -165,9 +169,9 @@ Then write down:
 
 **Read the **ledger** section below now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (last resort: after the code, the database read-only, and a question). Profile modules the profile rules out are never opened: one `N/A` row each.
 
-- **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, and write its rows to the ledger immediately. On a big app, resume with `python3 <skill-folder>/scripts/coverage.py --remaining` instead of getting shallower.
-- **Evidence is checked against the files:** `coverage.py` re-opens every cited `file:line` and every quoted line of code. Re-read before you quote.
-- **Split the work when you can.** In tools with helper agents, give each module (or group of small modules) to a fresh helper, **pasting the **helper-brief** section below in full** plus the module name and the inventory, sweep, versions and profile files. Each helper writes `.vibe-check/ledger.d/<module>.md`, which `coverage.py` reads with the main ledger.
+- **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, write its rows immediately. On a big app, resume with `coverage.py --remaining` rather than getting shallower.
+- **Evidence is checked:** `coverage.py` re-opens every cited `file:line` and quoted line. Re-read before you quote.
+- **Split the work when you can.** In tools with helper agents, give each module (or group of small modules) to a fresh helper, **pasting the **helper-brief** section below in full** plus the module name, its IDs from `.vibe-check/redo.md` and `codemap.py --module <name>`. Simple modules may use a faster model where the tool allows; blind spots, security, payments, the hunt and the re-check never do. Each helper writes `.vibe-check/ledger.d/<module>.md`, which `coverage.py` reads with the main ledger.
 
 **Core modules** (Full and Enterprise, every one):
 
@@ -331,6 +335,7 @@ Date: YYYY-MM-DD
 - **Blockers that depend on the country:** a 🔴 check marked *(blocker for EU users)* that fails in an app with no EU or EEA users is recorded as usual, with `outside the EU` in the evidence; it then counts as ⚠️ should-fix.
 - **Modules that don't apply:** for a profile module the profile rules out (no mobile app, no AI, no payments…), don't open its file. Write one row, `MOB-* | N/A | profile: no mobile app (profile.json)`, and move on.
 - **Ranges and `*` are for N/A only** (a platform section you don't use, a profile module that doesn't apply). Core modules are never N/A as a whole.
+- **Rows written by scripts, never by hand:** `AUTO:` rows in `ledger.d/01-auto.md` come from `autocheck.py` (checks a script can decide for certain: no lockfile, no CI config, no README…); `CARRIED from <date> run (<run>):` rows in `ledger.d/00-carried.md` come from `coverage.py --carry` (a pass or N/A whose check wording and every cited file are byte-for-byte unchanged since the last saved run). `coverage.py` re-runs the rule or re-hashes the files at every count, and rejects a row that no longer holds or was typed by hand. To redo a carried check, delete its row and check it again.
 - **`INV-<category>` rows:** checked/found for every inventory category that has items. **`H-` rows:** a verdict for every sweep hit. **`V-` rows:** a verdict for every component in `.vibe-check/versions.md`, with its source.
 - **Split the work when you can.** In tools with helper agents (subagents), give each module, or group of small modules, to its own fresh helper with the inventory, sweep, versions and profile files. Each helper writes its rows to `.vibe-check/ledger.d/<module>.md`; `coverage.py` reads them together with the main ledger. Without helpers, work one module at a time and resume with `coverage.py --remaining`.
 - **Evidence is checked against the files.** Every `file:line` you cite must exist, and code you quote in backticks must appear in the cited file exactly: `coverage.py` re-opens the files and rejects anything that doesn't match. Re-read before you quote.
@@ -364,7 +369,9 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 - The level (Quick, Full or Enterprise) and the user's answers so far.
 
 ### Rules (the same as the main run)
-1. **Read the whole module file first**, then check **every** item in it, one by one. Never from memory, never a sample. **Read only the project files your module needs** (the inventory and sweep say where things are); don't re-read the whole project.
+1. **Read the whole module file first**, then check **every one of your IDs** in it, one by one. Never from memory, never a sample.
+   - **Your IDs** are your module's line in `.vibe-check/redo.md`. Checks carried over from the last run (`ledger.d/00-carried.md`) or settled by `autocheck.py` (`ledger.d/01-auto.md`) are done: don't re-check or rewrite them.
+   - **Start from the code map:** `python3 <skill-folder>/scripts/codemap.py --module <your module>` lists the files and line numbers where your module's topics appear. Open those lines with some context (for example 20 lines around each); open a whole file only when a check needs it. Search (`rg`) for anything the map didn't point to; don't re-read the whole project.
 2. **Evidence or it didn't happen.** Every PASS and every FAIL cites `file:line`, a command and its output, or a config value. Every FAIL **quotes** the exact lines, re-read just now. `coverage.py` re-opens every file and rejects quotes that don't match.
 3. **Never guess a PASS.** If you can't confirm it, write `CAN'T TELL` with the reason and what would settle it.
 4. **Second look before every FAIL:** try to prove it wrong (handled elsewhere, unused code, public by design, the framework protects it). Label each FAIL `🔬 Confirmed` or `🔎 Likely`, and say what you ruled out.
@@ -1719,6 +1726,8 @@ Since last check (2026-11-02): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 ne
 | ❓ Need your answer | 12 |
 | **Checked** | **241 of 241** · ✅ nothing skipped |
 
+Checks redone: 92 · carried over: 143 · settled by script: 6 *(the line `coverage.py` prints under the table, pasted exactly)*
+
 | Area | Score | Passed | ❌ Must fix | ⚠️ Should fix | ❓ Your answer |
 |---|---|---|---|---|---|
 | AI blind spots | `████████░░` 84 | 16/19 | ❌ 1 | ⚠️ 1 | ❓ 1 |
@@ -1919,7 +1928,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -1934,7 +1943,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2076,6 +2085,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] `codemap.py`, `autocheck.py` and `coverage.py --carry` ran before the modules (unless the user asked for a full re-run), helpers did only their IDs from `.vibe-check/redo.md`, and the report has the *Checks redone · carried over · settled by script* line.
 - [ ] `report_pdf.py` made the PDF, and both the `.md` and the `.pdf` were handed over as downloadable files (or with full paths and an open command), not just saved.
 - [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*, pasted from `coverage.py --check-list`. Every `CHECK:` was tried in the code and the database first (`tried:` names the search), questions in disguise were asked as questions, and the database question was asked if any item needed it. Each answer was checked against the code first; passes that rest on an answer alone are `ANSWER: … · code: …`, and every answer that added to the profile has an `ADDS:` line and its module was checked.
 - [ ] The report has the *📚 Every check, with what was found* appendix written by `coverage.py` (not by hand), and the score card says `N blockers (M checks)`.

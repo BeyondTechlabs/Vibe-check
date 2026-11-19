@@ -49,6 +49,8 @@ Since last check (2026-11-02): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 ne
 | ❓ Need your answer | 12 |
 | **Checked** | **241 of 241** · ✅ nothing skipped |
 
+Checks redone: 92 · carried over: 143 · settled by script: 6 *(the line `coverage.py` prints under the table, pasted exactly)*
+
 | Area | Score | Passed | ❌ Must fix | ⚠️ Should fix | ❓ Your answer |
 |---|---|---|---|---|---|
 | AI blind spots | `████████░░` 84 | 16/19 | ❌ 1 | ⚠️ 1 | ❓ 1 |
@@ -249,7 +251,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -264,7 +266,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.6.12 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back

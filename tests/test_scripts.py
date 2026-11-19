@@ -351,6 +351,10 @@ def main() -> int:
         report.write_text(good_report.replace(ckm.group(0), f"**Checked** | **{int(ckm.group(1)) - 3} of {ckm.group(2)}**"))
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 1 and "totals say checked" in r.stdout, "coverage: a report with a typed 'Checked N of M' should be rejected")
+        # v3.7: the report must say how much was redone, carried over and settled by script
+        report.write_text(re.sub(r"Checks redone: .*\n", "", good_report))
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "Checks redone:" in r.stdout, "report: a report without the savings line should be rejected")
         # v3.6: secret guard: a full key in the report or the chat summary is refused; a masked one is fine
         report.write_text(good_report + f"\nEvidence: lib/stripe.ts:3 holds {STRIPE}\n")
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
@@ -612,6 +616,66 @@ def main() -> int:
         check(r.returncode == 1, "coverage: Quick still needs every 🔴 core check")
         r = run("coverage.py", str(ledger(out, quick, "Quick")), "--remaining")
         check("security" in r.stdout and "blind-spots" not in r.stdout, "coverage --remaining: wrong list")
+
+        # v3.7 carry-over: a saved run lets the next run carry unchanged checks, proved by file hashes
+        import shutil
+        if (out / "ledger.d").exists():
+            shutil.rmtree(out / "ledger.d")
+        r = run("coverage.py", str(ledger(out, full + inv_rows + hit_rows)), "--save")
+        check(r.returncode == 0 and "saved to history" in r.stdout, f"carry: the full run should save:\n{r.stdout[-300:]}")
+        r = run("coverage.py", str(out / "ledger.md"), "--carry")
+        carry_out = r.stdout
+        carried = (out / "ledger.d" / "00-carried.md").read_text() if (out / "ledger.d" / "00-carried.md").exists() else ""
+        n_carried = carried.count("| CARRIED from ")
+        check(r.returncode == 0 and n_carried > 100 and (out / "redo.md").exists(),
+              f"carry: --carry should carry the unchanged passes ({n_carried}):\n{r.stdout[-300:]}")
+        r = run("coverage.py", str(ledger(out, inv_rows + hit_rows)))
+        check(r.returncode == 0 and f"carried over: {n_carried}" in r.stdout,
+              f"carry: carried rows should count, with the savings line:\n{carry_out}\n{[l for l in r.stdout.splitlines() if 'GAP' in l][:3]}")
+        changed = app / REAL[1]
+        before = changed.read_text()
+        changed.write_text(before + "\n// edited after the audit\n")
+        r = run("coverage.py", str(out / "ledger.md"))
+        check(r.returncode == 1 and f"{REAL[1]} changed" in r.stdout, "carry: a carried check whose cited file changed must be redone")
+        r = run("coverage.py", str(out / "ledger.md"), "--carry")
+        check(f"{REAL[1]}" in (out / "redo.md").read_text(), "carry: redo.md should list the changed file")
+        changed.write_text(before)
+        r = run("coverage.py", str(out / "ledger.md"), "--carry")
+        good_carry = (out / "ledger.d" / "00-carried.md").read_text()
+        first = next(l for l in good_carry.splitlines() if l.startswith("| ") and "CARRIED" in l)
+        (out / "ledger.d" / "00-carried.md").write_text(good_carry.replace(first, first.replace("handles it", "handles it well")))
+        r = run("coverage.py", str(out / "ledger.md"))
+        check(r.returncode == 1 and "must keep its result and evidence" in r.stdout, "carry: an edited carried row must be rejected")
+        cid0 = first.split("|")[1].strip()
+        (out / "ledger.d" / "00-carried.md").write_text(good_carry.replace(first, f"| {cid0} | PASS | CARRIED: trust me |"))
+        r = run("coverage.py", str(out / "ledger.md"))
+        check(r.returncode == 1 and "written by 'coverage.py --carry' only" in r.stdout, "carry: a hand-typed carried row must be rejected")
+        shutil.rmtree(out / "ledger.d")
+
+        # v3.7 autocheck: certain answers only, and coverage.py re-runs the rule so AUTO rows can't be typed
+        with tempfile.TemporaryDirectory() as tmpa:
+            pa = Path(tmpa) / "p"; pa.mkdir()
+            (pa / "package.json").write_text('{"name": "x", "dependencies": {"react": "18.0.0"}}')
+            git(pa, "init", "-q")
+            r = run("autocheck.py", str(pa))
+            auto = (pa / ".vibe-check" / "ledger.d" / "01-auto.md").read_text()
+            for cid in ("SUP-001", "SEC-050", "OPS-005", "OPS-001", "REL-043"):
+                check(f"| {cid} | FAIL 🔬 Confirmed | AUTO:" in auto, f"autocheck: {cid} should fail for an app with no lockfile, CI or README:\n{auto}")
+            (pa / "package-lock.json").write_text("{}"); (pa / ".nvmrc").write_text("20\n"); (pa / "README.md").write_text("# x\n")
+            (pa / ".github" / "workflows").mkdir(parents=True); (pa / ".github" / "workflows" / "ci.yml").write_text("steps:\n  - run: npm ci\n")
+            git(pa, "add", "-A")
+            r = run("autocheck.py", str(pa))
+            auto = (pa / ".vibe-check" / "ledger.d" / "01-auto.md").read_text()
+            check("| SUP-001 | PASS | AUTO:" in auto and "| OPS-005 | PASS | AUTO:" in auto and "OPS-001" not in auto and "REL-043" not in auto,
+                  f"autocheck: with a committed lockfile, CI using it, a pin and a README it should pass or leave them:\n{auto}")
+        r = run("coverage.py", str(ledger(out, [x for x in full if not x.startswith("| OPS-001 |")] + ["| OPS-001 | FAIL 🔬 Confirmed | AUTO: no CI anywhere, trust me |"] + inv_rows + hit_rows)))
+        check(r.returncode == 1 and "AUTO" in r.stdout and "autocheck.py" in r.stdout, f"autocheck: a hand-typed AUTO row must be rejected:\n{r.stdout[-300:]}")
+
+        # v3.7 code map: every module part, and a helper can print just its own
+        r = run("codemap.py", str(app))
+        check(r.returncode == 0 and (out / "codemap.md").exists() and "## security" in (out / "codemap.md").read_text(), f"codemap: should write codemap.md:\n{r.stdout}{r.stderr}")
+        r = run("codemap.py", str(app), "--module", "security")
+        check(r.returncode == 0 and r.stdout.startswith("## security") and "## fintech" not in r.stdout, "codemap: --module should print only that module")
 
     # hunt benchmark: bugs stay invisible to the sweep (novel), and the scorer works
     bench = ROOT / "bench"

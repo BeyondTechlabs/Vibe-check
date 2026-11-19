@@ -376,6 +376,8 @@ skills/vibe-check/          ← the skill (source of truth)
 │   ├── coverage.py           counts the ledger against the checklist; fails on any gap
 │   ├── share_stats.py        opt-in: shows, then (only if you say yes) shares anonymous counts
 │   ├── report_pdf.py         turns the verified report into a branded PDF, on your computer
+│   ├── codemap.py            one map of the code: where each module's topics are, so helpers open only those lines
+│   ├── autocheck.py          settles the checks a script can decide for certain (no lockfile, no CI, no README…)
 │   └── version_check.py      tells you when a newer vibe-check is out (sends nothing about you)
 └── references/
     ├── blind-spots.md        step 3: the 19 AI blind spots (every level)
