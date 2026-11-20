@@ -95,6 +95,8 @@
   - Cross-platform release builds and bridges
   - Firebase rules, functions and projects
   - Apps for children in the stores
+  - Cloud account guardrails
+  - Live database drifted from the repo
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -633,4 +635,16 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Safe fix:** declare the target audience honestly in Play Console and App Store Connect; keep only SDKs the stores allow for children's apps; remove tracking and personalised ads for children; add a parental gate before external links, purchases and permission prompts; pair this with the consent work in `kids-education.md`.
 **Trap:** an analytics or ad SDK pulled in by another library that isn't on the stores' allowed list.
 **Verify:** the store's target-audience declaration matches the app; the dependency tree has no disallowed SDKs; links and purchases ask a parent first.
+
+### Cloud account guardrails
+**Covers:** CLD-023, CLD-026, CLD-028, CLD-030, CLD-032
+**Safe fix:** enforce MFA (or SSO with MFA) for every human user and remove console passwords from automation users; turn on GuardDuty / Security Command Center / Defender for Cloud with findings routed to a person; switch on account-level public access blocking (S3 account Block Public Access, public access prevention, `allowBlobPublicAccess: false`); remove `allUsers`, `allAuthenticatedUsers` and `*` grants except for deliberately public assets; make snapshots and images private or share them with named accounts only. Apply through IaC where the project has it, so the change is reviewed and stays.
+**Trap:** turning on account-level public access blocking while a static site or public asset bucket still relies on public access: move those to a CDN with an origin identity first.
+**Verify:** `live.py` re-run shows the settings as passed; a test object in a private bucket can't be fetched anonymously; a user without MFA can't sign in.
+
+### Live database drifted from the repo
+**Covers:** PLT-052
+**Safe fix:** bring production back to the migrations: re-apply the RLS and policy migrations (or write a new migration that matches what's live, if the live change was intended), then deploy schema changes only through migrations.
+**Trap:** "fixing" the drift by editing production by hand again, which leaves the repo and the database disagreeing the next time.
+**Verify:** `live.py supabase` shows RLS on for every table the migrations protect, and a fresh project built from the migrations has the same policies.
 

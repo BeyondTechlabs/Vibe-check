@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits web and mobile apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?".
 license: MIT
 metadata:
-  version: "3.9.1"
+  version: "4.0.0"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
@@ -73,7 +73,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 3. **Never guess a PASS.** If you can't confirm something, mark it **CAN'T TELL** and turn it into a question for the user.
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
-6. **Use only safe actions.** No destructive commands; don't touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time it adds) or opening copies of production data, and **never test real users' passwords**, even offline (`references/live-tests.md`). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
+6. **Use only safe actions.** No destructive commands; never touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time), reading a live account, or opening production data copies, and **never test real users' passwords**, even offline (`references/live-tests.md`). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in `references/fixing.md`.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
@@ -145,17 +145,18 @@ python3 <skill-folder>/scripts/versions.py .             # lists the runtime, fr
 python3 <skill-folder>/scripts/codemap.py .              # where each module's topics are (file:lines)
 python3 <skill-folder>/scripts/autocheck.py .            # settles what a script can decide for certain
 python3 <skill-folder>/scripts/coverage.py --carry       # keeps unchanged checks; lists the rest in redo.md
+python3 <skill-folder>/scripts/live.py . --detect        # signed-in accounts (`references/live-accounts.md`)
 ```
 
 - `.vibe-check/inventory.md` is your **checklist of things in the app.** Bugs hide in the one route nobody opened, so every item in it must be checked, and the report shows counts like *API routes checked: 47/47*. The script finds the common patterns; **add anything it missed** (and raise the "found" count).
 - `.vibe-check/sweep.md` lists every risky-pattern match, with secrets masked. Each hit is a **lead, not a finding**: give every hit a verdict in the ledger after the second look.
 - `.vibe-check/versions.md` lists **everything the app runs, with exact versions**, and the audit tool for each ecosystem. Every component gets a `V-` row in the ledger with a verdict (`CURRENT`, `OUTDATED`, `EOL`, `VULNERABLE` or `CAN'T TELL`) and the source URL opened during the run, or the audit tool that checked it (`references/vulnerabilities.md`). Versions are never judged from memory.
-- **Do only the checks in `.vibe-check/redo.md`**; carried and AUTO rows are done.
+- **Do only the checks in `.vibe-check/redo.md`**.
 - **If the scripts aren't available or Python can't run** (single-file versions for other tools, some builder platforms), do it by hand: list the inventory categories from `inventory.py`'s list yourself, search for the blind-spot #3 patterns and the patterns in `references/sweep-patterns.md`, and write *"coverage counted by hand: scripts couldn't run"* in the report.
 
 Then write down:
 - **Stack:** framework and version, hosting, DB, auth, payments, email, storage, AI providers, analytics, every third-party API.
-- **Builder platform:** Lovable, Bolt, v0, Replit, Cursor, Claude Code…
+- **Builder:** Lovable, Bolt, v0, Replit, Cursor, Claude Code…
 - **Data map:** every piece of personal data (forms, uploads, photo GPS, logs, analytics, data sent to LLMs): where it's stored, which third parties get it, how long it's kept.
 - **Entry points:** pages, API routes, server actions, edge functions, webhooks, cron, workers, admin pages.
 - **Tables, collections, buckets**, with access rules.

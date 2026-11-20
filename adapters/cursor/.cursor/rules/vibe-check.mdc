@@ -72,7 +72,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 3. **Never guess a PASS.** If you can't confirm something, mark it **CAN'T TELL** and turn it into a question for the user.
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
-6. **Use only safe actions.** No destructive commands; don't touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time it adds) or opening copies of production data, and **never test real users' passwords**, even offline (the **live-tests** section below). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
+6. **Use only safe actions.** No destructive commands; never touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time), reading a live account, or opening production data copies, and **never test real users' passwords**, even offline (the **live-tests** section below). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
@@ -144,17 +144,18 @@ python3 <skill-folder>/scripts/versions.py .             # lists the runtime, fr
 python3 <skill-folder>/scripts/codemap.py .              # where each module's topics are (file:lines)
 python3 <skill-folder>/scripts/autocheck.py .            # settles what a script can decide for certain
 python3 <skill-folder>/scripts/coverage.py --carry       # keeps unchanged checks; lists the rest in redo.md
+python3 <skill-folder>/scripts/live.py . --detect        # signed-in accounts (the **live-accounts** section below)
 ```
 
 - `.vibe-check/inventory.md` is your **checklist of things in the app.** Bugs hide in the one route nobody opened, so every item in it must be checked, and the report shows counts like *API routes checked: 47/47*. The script finds the common patterns; **add anything it missed** (and raise the "found" count).
 - `.vibe-check/sweep.md` lists every risky-pattern match, with secrets masked. Each hit is a **lead, not a finding**: give every hit a verdict in the ledger after the second look.
 - `.vibe-check/versions.md` lists **everything the app runs, with exact versions**, and the audit tool for each ecosystem. Every component gets a `V-` row in the ledger with a verdict (`CURRENT`, `OUTDATED`, `EOL`, `VULNERABLE` or `CAN'T TELL`) and the source URL opened during the run, or the audit tool that checked it (the **vulnerabilities** section below). Versions are never judged from memory.
-- **Do only the checks in `.vibe-check/redo.md`**; carried and AUTO rows are done.
+- **Do only the checks in `.vibe-check/redo.md`**.
 - **If the scripts aren't available or Python can't run** (single-file versions for other tools, some builder platforms), do it by hand: list the inventory categories from `inventory.py`'s list yourself, search for the blind-spot #3 patterns and the patterns in the **sweep-patterns** section below, and write *"coverage counted by hand: scripts couldn't run"* in the report.
 
 Then write down:
 - **Stack:** framework and version, hosting, DB, auth, payments, email, storage, AI providers, analytics, every third-party API.
-- **Builder platform:** Lovable, Bolt, v0, Replit, Cursor, Claude Code…
+- **Builder:** Lovable, Bolt, v0, Replit, Cursor, Claude Code…
 - **Data map:** every piece of personal data (forms, uploads, photo GPS, logs, analytics, data sent to LLMs): where it's stored, which third parties get it, how long it's kept.
 - **Entry points:** pages, API routes, server actions, edge functions, webhooks, cron, workers, admin pages.
 - **Tables, collections, buckets**, with access rules.
@@ -326,6 +327,7 @@ Date: YYYY-MM-DD
 - **Settle it yourself first; `CHECK:` is the last resort.** Before writing either, work through this order, and stop at the first that settles it:
   1. **The code:** search and read it (`rg`, the files, the migrations, the config). If the code shows it, it's PASS or FAIL. "It's a lot of files" is never a reason for `CHECK:`.
   2. **The database, read-only:** policies, grants, functions, views, cron jobs, tables (audit logs, roles), storage buckets. With access, write `SQL: <query> → <result>` as evidence. Without it, ask once, as a choice: *"May I read your database, read-only? It settles N checks."* and write `DATABASE: yes` or `DATABASE: no` in `.vibe-check/answers.md`. Backups and restores are dashboard items, not SQL.
+  2b. **The live accounts, read-only:** if `live.py --detect` shows the tool signed in, ask once and read it (the **live-accounts** section); copy its result as `LIVE: <id> → <summary>`.
   3. **A question:** anything the user knows from memory (do you have a written plan, a policy, a contract, a process; who does X) is `ASK:` and is asked as a choice, never `CHECK:`.
   4. **Only then `CHECK:`,** for a place outside the code and database that only the user can open, written exactly as `CHECK: <place> → <what to look at> · tried: <the concrete search you ran first>`, for example `CHECK: Lovable Cloud → Users → Auth settings → CAPTCHA is on · tried: \`rg -i captcha src/ supabase/\` found nothing`. The running app counts as a place (`CHECK: the running app → …`) when live tests weren't allowed.
   
@@ -337,6 +339,7 @@ Date: YYYY-MM-DD
 - **Blockers that depend on the country:** a 🔴 check marked *(blocker for EU users)* that fails in an app with no EU or EEA users is recorded as usual, with `outside the EU` in the evidence; it then counts as ⚠️ should-fix.
 - **Modules that don't apply:** for a profile module the profile rules out (no mobile app, no AI, no payments…), don't open its file. Write one row, `MOB-* | N/A | profile: no mobile app (profile.json)`, and move on.
 - **Ranges and `*` are for N/A only** (a platform section you don't use, a profile module that doesn't apply). Core modules are never N/A as a whole.
+- **`LIVE:` rows** copy a result from `.vibe-check/live/summary.md` exactly; `coverage.py` checks it against the saved result, its check, its verdict, its age and the user's `LIVE: <provider>: yes`.
 - **Rows written by scripts, never by hand:** `AUTO:` rows in `ledger.d/01-auto.md` come from `autocheck.py` (checks a script can decide for certain: no lockfile, no CI config, no README…); `CARRIED from <date> run (<run>):` rows in `ledger.d/00-carried.md` come from `coverage.py --carry` (a pass or N/A whose check wording and every cited file are byte-for-byte unchanged since the last saved run). `coverage.py` re-runs the rule or re-hashes the files at every count, and rejects a row that no longer holds or was typed by hand. To redo a carried check, delete its row and check it again.
 - **`INV-<category>` rows:** checked/found for every inventory category that has items. **`H-` rows:** a verdict for every sweep hit. **`V-` rows:** a verdict for every component in `.vibe-check/versions.md`, with its source.
 - **Split the work when you can.** In tools with helper agents (subagents), give each module, or group of small modules, to its own fresh helper with the inventory, sweep, versions and profile files. Each helper writes its rows to `.vibe-check/ledger.d/<module>.md`; `coverage.py` reads them together with the main ledger. Without helpers, work one module at a time and resume with `coverage.py --remaining`.
@@ -893,6 +896,7 @@ Check the sections for the stack you found in Step 1. These are the problems tha
 - [ ] 🟡 PLT-008 Auth settings: email confirmation on, a sensible OTP expiry, leaked-password protection, redirect URLs restricted, and the rate limits reviewed.
 - [ ] 🟡 PLT-009 Using the connection pooler for serverless. Point-in-time recovery or backups on the right plan.
 - [ ] 🟡 PLT-010 Edge functions verify the JWT unless they're deliberately public (webhooks verify signatures instead).
+- [ ] 🔴 PLT-052 **The live database matches the repo:** every table the migrations protect with RLS has RLS on in the live database, and live policies aren't looser than the migrations (read with `live.py` and a read-only connection; drift means someone changed production by hand).
 
 ### Firebase / Firestore
 
@@ -1712,6 +1716,31 @@ Load this file when the app runs on AWS, Google Cloud, Azure, DigitalOcean, Hetz
 - [ ] 🟡 CLD-021 **Backups and snapshots are automatic** for databases and volumes, and a restore has been tested (see the **devops** section).
 - [ ] 🟢 CLD-022 **Cost controls:** budgets and alerts, auto-scaling limits, and no forgotten resources (unused instances, load balancers, IPs, snapshots).
 
+### Account settings (read live with `live.py` when the user allows; otherwise from IaC files or `CHECK:`)
+- [ ] 🔴 CLD-023 **MFA on every human user:** every IAM user with a console password (AWS), every human principal (Google Cloud, Azure) uses MFA or signs in through SSO that enforces it.
+- [ ] 🟡 CLD-024 **No old or unused access keys:** user access keys and service account keys older than 90 days are rotated, and unused ones are deleted.
+- [ ] 🟡 CLD-025 **A strong password policy, or SSO only:** cloud console passwords have a length and reuse policy, or people sign in only through SSO.
+- [ ] 🔴 CLD-026 **Threat detection is on:** AWS GuardDuty, Google Security Command Center or Microsoft Defender for Cloud is enabled for production, and someone reads its findings.
+- [ ] 🟡 CLD-027 **Customer-managed keys rotate:** KMS / Cloud KMS / Key Vault keys used for data have automatic rotation on.
+- [ ] 🔴 CLD-028 **Public access is blocked at the account level:** S3 account-wide Block Public Access, Google Cloud public access prevention, Azure `allowBlobPublicAccess: false`, so one wrong bucket setting can't expose data.
+- [ ] 🟡 CLD-029 **Few owners and admins:** a handful of named people have owner/admin roles; no shared or personal email accounts own production.
+- [ ] 🔴 CLD-030 **No public principals:** no IAM binding or policy grants `allUsers`, `allAuthenticatedUsers`, `*` or `AllUsers` access, except to assets meant to be public.
+- [ ] 🟡 CLD-031 **Workloads don't use downloaded keys:** services use attached roles, workload identity or managed identities rather than long-lived key files.
+- [ ] 🔴 CLD-032 **Snapshots and machine images aren't public:** database snapshots, disk snapshots and images are shared only with named accounts.
+- [ ] 🟡 CLD-033 **Audit logs are kept and protected:** log file validation on (AWS), retention long enough to investigate an incident, and only a few people can delete them.
+- [ ] 🟡 CLD-034 **Storage requires modern TLS:** minimum TLS 1.2 on storage accounts and buckets (Azure `minimumTlsVersion`, an S3 policy denying non-TLS requests).
+- [ ] 🟡 CLD-035 **Secret stores can't be wiped by mistake:** Key Vault soft delete and purge protection; Secrets Manager / Secret Manager recovery windows.
+- [ ] 🟡 CLD-036 **Load balancers use a modern TLS policy** and redirect HTTP to HTTPS.
+- [ ] 🟡 CLD-037 **Databases are protected from loss:** automated backups with a retention period, and deletion protection on production databases.
+- [ ] 🟡 CLD-038 **Production doesn't live in the default network,** and network flow logs are on where incidents would need them.
+- [ ] 🟡 CLD-039 **Serverless functions aren't open to anyone** (Lambda function URLs with `AuthType NONE`, unauthenticated Cloud Functions/Run, anonymous Azure Functions) unless they're meant to be public and check their callers.
+- [ ] 🟡 CLD-040 **Container registries are private** and scan images for known vulnerabilities.
+- [ ] 🟡 CLD-041 **Alerts for risky account events:** root/owner sign-ins, IAM policy changes and disabled logging alert a person.
+- [ ] 🟡 CLD-042 **Function environment variables hold no plain secrets:** Lambda, Cloud Functions and App Service settings reference a secret store instead.
+- [ ] 🟡 CLD-043 **Kubernetes RBAC is tight:** no `cluster-admin` for default or workload service accounts, and namespaces separate teams or apps.
+- [ ] 🟡 CLD-044 **Kubernetes network policies** restrict which pods can talk to which, and to the internet.
+- [ ] 🟡 CLD-045 **Kubernetes control-plane audit logs are on** and kept.
+
 <a id="desktop-extensions"></a>
 
 ## Desktop apps and browser extensions
@@ -2124,7 +2153,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.9.1 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v4.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -2139,7 +2168,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.9.1 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v4.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2281,6 +2310,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] Signed-in accounts were offered as live checks; each one read has `LIVE: <provider>: yes` in `.vibe-check/answers.md`, only `live.py` read it, and no `CHECK:` row points at an account that was read.
 - [ ] The work was split by app size as `codemap.py` planned; each helper ran `coverage.py --part` on its rows; at most 15 questions were asked and every other open question is under *❓ Questions for you*.
 - [ ] Mobile apps: every inventory item (components, permissions, deep links, WebViews, bridges, Firebase paths) has a verdict, and `appscan.py` ran on a built app only after the user said yes.
 - [ ] Build, lint, type-check and tests ran only after `BUILDS: yes`; fixes went where the user chose (separate copy, branch or patch files), and `.vibe-check/fix-log.md` says which.
@@ -2442,6 +2472,8 @@ Never call the audit complete while a 🔴 item is FAIL or an unresolved CAN'T T
   - Cross-platform release builds and bridges
   - Firebase rules, functions and projects
   - Apps for children in the stores
+  - Cloud account guardrails
+  - Live database drifted from the repo
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -2981,6 +3013,18 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Trap:** an analytics or ad SDK pulled in by another library that isn't on the stores' allowed list.
 **Verify:** the store's target-audience declaration matches the app; the dependency tree has no disallowed SDKs; links and purchases ask a parent first.
 
+#### Cloud account guardrails
+**Covers:** CLD-023, CLD-026, CLD-028, CLD-030, CLD-032
+**Safe fix:** enforce MFA (or SSO with MFA) for every human user and remove console passwords from automation users; turn on GuardDuty / Security Command Center / Defender for Cloud with findings routed to a person; switch on account-level public access blocking (S3 account Block Public Access, public access prevention, `allowBlobPublicAccess: false`); remove `allUsers`, `allAuthenticatedUsers` and `*` grants except for deliberately public assets; make snapshots and images private or share them with named accounts only. Apply through IaC where the project has it, so the change is reviewed and stays.
+**Trap:** turning on account-level public access blocking while a static site or public asset bucket still relies on public access: move those to a CDN with an origin identity first.
+**Verify:** `live.py` re-run shows the settings as passed; a test object in a private bucket can't be fetched anonymously; a user without MFA can't sign in.
+
+#### Live database drifted from the repo
+**Covers:** PLT-052
+**Safe fix:** bring production back to the migrations: re-apply the RLS and policy migrations (or write a new migration that matches what's live, if the live change was intended), then deploy schema changes only through migrations.
+**Trap:** "fixing" the drift by editing production by hand again, which leaves the repo and the database disagreeing the next time.
+**Verify:** `live.py supabase` shows RLS on for every table the migrations protect, and a fresh project built from the migrations has the same policies.
+
 <a id="sweep-patterns"></a>
 
 ## Sweep patterns
@@ -3396,3 +3440,61 @@ Give the one step for their tool from the table below, then *"start a new sessio
 | Lovable | Settings → Skills: import again from `https://github.com/BeyondTechlabs/Vibe-check/tree/main/skills/vibe-check` |
 | A copied rules or command file (Cursor, Copilot, Windsurf, Cline, Gemini CLI) | Copy the new file from the repo's `adapters/` folder, or switch to `npx skills add` |
 | Pasted into a chat (Bolt, v0, ChatGPT) | Paste the new `dist/vibe-check.md` from the repo |
+
+<a id="live-accounts"></a>
+
+## Live account checks (read-only)
+
+Contents: When · Asking first · Running it · Using the results · What each account answers · Safety rules
+
+Code shows what the app *should* do; the accounts show what's *actually* set. Reading the user's signed-in cloud and platform accounts settles many checks that would otherwise be `CHECK:` items for the user, and catches drift (the live database or settings disagree with the repo).
+
+### When
+After Step 2's scripts, run `python3 <skill-folder>/scripts/live.py . --detect`. It lists which tools are installed and look signed in (GitHub, Firebase, Supabase, Vercel, Netlify, AWS, Google Cloud, Azure, and Prowler). It reads nothing from any account. If none are signed in, skip this file: those checks stay `CHECK:` items.
+
+### Asking first
+Ask once, as a choice, listing the accounts that look signed in:
+*"You're signed in to GitHub, Supabase and AWS here. May I read their settings, read-only? Nothing will be changed, no data is read, and results stay on this computer."* · *Yes, all of them (Recommended)* · *Choose which* · *No, skip live checks*.
+
+For each yes, write `LIVE: <provider>: yes` in `.vibe-check/answers.md` (`github`, `firebase`, `supabase`, `vercel`, `netlify`, `aws`, `gcp`, `azure`). `live.py` refuses to read an account without that line and `--consent`; `coverage.py` refuses `LIVE:` evidence without it.
+
+- **Read-only roles:** recommend them in one line: AWS *SecurityAudit* (or *ViewOnlyAccess*), Google Cloud *Security Reviewer* plus *Viewer*, Azure *Reader* plus *Security Reader*.
+- **Supabase:** needs a read-only database connection that **the user sets themselves** in `VIBE_CHECK_DB_URL` (for example a role granted only `SELECT` on the catalog). Never ask for the connection string or password in the chat.
+- **Several AWS profiles or Google Cloud projects:** ask which one is production (`--profile`, `--project`).
+- **Prowler (optional, for AWS, Google Cloud and Azure):** a deeper open-source cloud scanner. If it isn't installed, ask before installing it (`pip install prowler`); it only reads.
+- **Cloud module:** if the user says yes to AWS, Google Cloud or Azure and the profile didn't load the **cloud-infra** section, write `ADDS: cloud-infra` in `.vibe-check/answers.md`.
+
+### Running it
+```bash
+python3 <skill-folder>/scripts/live.py . --run github --consent
+python3 <skill-folder>/scripts/live.py . --run aws --consent --profile prod
+python3 <skill-folder>/scripts/live.py . --run prowler-aws --consent --profile prod   # optional, takes longer
+```
+Each run writes `.vibe-check/live/<provider>.json` (raw results with a timestamp) and refreshes `.vibe-check/live/summary.md` (one line per result: id, checks, account, summary). Read the summary, not the raw files.
+
+### Using the results
+- **As evidence**, copy a result exactly: `| CLD-023 | FAIL 🔬 Confirmed | LIVE: aws:iam-user-mfa → console users without MFA: alice |`. `coverage.py` checks the result exists, belongs to that check, has the same verdict, was read within 30 days, and that the user said yes.
+- **`check` results** (for example public buckets that may be deliberate) can't settle a PASS or FAIL alone: look at the code or ask, then decide.
+- **Live beats CHECK:** when an account was read, a `CHECK:` row whose place is that account is refused. Use its live result instead.
+- **Drift is a finding:** `supabase:drift-rls` (PLT-052) means production was changed by hand.
+- **In the report**, add a *Live account checks* line to the header (which accounts, shortened IDs, when) and list each command in *Tools run*.
+
+### What each account answers
+
+| Account | Checks it can settle |
+|---|---|
+| GitHub | OPS-004, SUP-019, SEC-026 (secret scanning, push protection) · SUP-020 (branch protection) · SUP-009 (default token permission) · OPS-003 (Dependabot alerts) · VUL-005 (open critical/high alerts) · SUP-021 (organisation 2FA) |
+| Supabase | PLT-001 (RLS on every table) · PLT-002 (policies allowing everything) · PLT-006 (views bypassing RLS) · PLT-004 (public buckets) · PLT-052 (drift from migrations) |
+| Firebase | FBS-012 (separate projects) · FBS-013 (API key restrictions) |
+| Vercel, Netlify | SEC-022 (secrets in browser-visible variables, by name; values are never read) |
+| AWS | CLD-001, CLD-002, CLD-007, CLD-009, CLD-010, CLD-012, CLD-022, CLD-023 to CLD-028, CLD-030, CLD-032, CLD-033, CLD-037, CLD-039 |
+| Google Cloud | CLD-001, CLD-010, CLD-012, CLD-028 to CLD-031, CLD-037, FBS-013 |
+| Azure | CLD-001, CLD-010 to CLD-012, CLD-026, CLD-028, CLD-034, CLD-035 |
+| Prowler | its findings mapped to the CLD checks above |
+
+### Safety rules
+- Only commands on `live.py`'s read-only allow-list run (list, describe, get, show, view; `SELECT` inside a read-only transaction). Anything else is refused by the script.
+- It uses the user's existing login. It never asks for, stores or prints keys, tokens or passwords, and never reads secret values (env var values, secrets, parameters).
+- It reads settings, never data: no listing objects in buckets, no reading user rows, no exports, no invoking functions.
+- Results stay in `.vibe-check/live/` (git-ignored). Account IDs are shortened to their last 4 characters.
+- It's not a penetration test: it reads configuration; it doesn't attack anything.

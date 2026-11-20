@@ -37,6 +37,7 @@ Exit code 0 = complete, 1 = gaps found. Python 3.8+, standard library only.
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone
 import importlib.util
 import json
 import os
@@ -494,7 +495,7 @@ def profile_hash(vc: Path):
     return _sha(json.dumps([mods, adds]).encode())
 
 
-NO_CARRY = re.compile(r"(?<![\w./-])(?:SQL|screenshot|ANSWER|AUTO|CARRIED|CHECK|ASK)\s*:|`(?:npm|pnpm|yarn|npx|bun|curl|pip|pip-audit|osv-scanner|"
+NO_CARRY = re.compile(r"(?<![\w./-])(?:SQL|screenshot|ANSWER|AUTO|CARRIED|CHECK|ASK|LIVE)\s*:|`(?:npm|pnpm|yarn|npx|bun|curl|pip|pip-audit|osv-scanner|"
                       r"trivy|semgrep|nuclei|cargo|govulncheck|lighthouse|gh|supabase|firebase|vercel|wrangler)\b", re.I)
 
 
@@ -540,6 +541,58 @@ def autocheck_settle(root: Path):
         spec.loader.exec_module(mod)
         _auto_cache[key] = mod.settle(root)
     return _auto_cache[key]
+
+
+LIVE_RX = re.compile(r"^\s*LIVE:\s*([\w-]+):([\w./-]+)\s*(?:→|->)\s*(.+?)\s*$", re.S)
+_live_cache = {}
+
+
+def load_live(vc: Path):
+    if str(vc) not in _live_cache:
+        res = {}
+        for f in sorted((vc / "live").glob("*.json")) if (vc / "live").exists() else []:
+            try:
+                d = json.loads(f.read_text("utf-8"))
+            except ValueError:
+                continue
+            if isinstance(d, dict) and "results" in d:
+                for r in d["results"]:
+                    res[r["id"]] = (d, r)
+        _live_cache[str(vc)] = res
+    return _live_cache[str(vc)]
+
+
+def verify_live_row(key, r, ev, vc):
+    """LIVE rows must copy a result live.py saved, for an account the user agreed to, with the same verdict."""
+    m = LIVE_RX.match(ev)
+    if not m:
+        return [f"{key}: write live evidence as 'LIVE: <result id> → <summary>', copied from .vibe-check/live/summary.md"]
+    rid = f"{m.group(1)}:{m.group(2)}"
+    got = load_live(vc).get(rid)
+    if not got:
+        return [f"{key}: {rid} isn't in .vibe-check/live/: run live.py for that account (after the user's yes) and copy its result"]
+    d, res = got
+    base = d["provider"].split("-")[-1] if d["provider"].startswith("prowler") else d["provider"]
+    ans = (vc / "answers.md").read_text("utf-8") if (vc / "answers.md").exists() else ""
+    out = []
+    if not d.get("consent") or not re.search(r"^\s*[-*]?\s*LIVE:\s*" + re.escape(base) + r"\s*:?\s*yes\b", ans, re.M | re.I):
+        out.append(f"{key}: the live {base} account was read without a recorded yes: write 'LIVE: {base}: yes' in .vibe-check/answers.md after asking")
+    if key not in res.get("checks", []):
+        out.append(f"{key}: {rid} is evidence for {', '.join(res.get('checks', [])) or 'no check'}, not {key}")
+    want = {"pass": "PASS", "fail": "FAIL"}.get(res["status"])
+    if want and r != want:
+        out.append(f"{key}: {rid} says {res['status']}, so the row must be {want}")
+    if not want and r in ("PASS", "FAIL"):
+        out.append(f"{key}: {rid} is only '{res['status']}' ({res['summary'][:60]}): it can't settle a PASS or FAIL alone")
+    if m.group(3).strip() != res["summary"].strip():
+        out.append(f"{key}: copy the summary of {rid} exactly: '{res['summary'][:90]}'")
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(d["time"])).days
+        if age > 30:
+            out.append(f"{key}: {rid} was read {age} days ago: run live.py again")
+    except (KeyError, ValueError):
+        pass
+    return out
 
 
 def verify_script_row(key, r, ev, root, vc):
@@ -958,6 +1011,9 @@ def main() -> int:
         if by_script:
             errors.extend(verify_script_row(key, r, ev, root, ledger_path.parent))
             on_word = True    # proved by the script, not by a quote
+        if re.match(r"^\s*LIVE\s*:", ev):
+            errors.extend(verify_live_row(key, r, ev, ledger_path.parent))
+            on_word = True    # proved by live.py's saved result
         if r in ("PASS", "FAIL") and not on_word:
             evidence_problems += check_evidence(key, ev, root)
         if r in ("PASS", "FAIL") and not on_word and not CHECKABLE.search(ev):
@@ -1078,9 +1134,17 @@ def main() -> int:
     dbm = re.search(r"^\s*[-*]?\s*DATABASE\s*:\s*(\w+)", ans_text, re.M | re.I)
     db_answer = dbm.group(1).lower() if dbm else None
     db_answer = "yes" if db_answer in ("yes", "y", "allowed") else ("no" if db_answer else None)
+    live_read = {d["provider"].split("-")[-1] for d, _ in load_live(ledger_path.parent).values()}
+    live_names = {"github": ("github",), "aws": ("aws", "amazon"), "gcp": ("google cloud", "gcp", "gcloud"), "azure": ("azure",),
+                  "firebase": ("firebase",), "supabase": ("supabase",), "vercel": ("vercel",), "netlify": ("netlify",)}
     for c, v in results.items():
         if v[0] == "CAN'T TELL" and ask_kind(c, results) == "check":
             errors.extend(check_problems(c, v[1], have_sql, db_answer))
+            place = check_parts(v[1])[0].lower()
+            hit = next((pv for pv in live_read for nm in live_names.get(pv, ()) if nm in place), None)
+            if hit and "live.py" not in v[1]:
+                errors.append(f"{c}: the live {hit} account was read: settle this with its result from .vibe-check/live/summary.md "
+                              f"('LIVE: <id> → <summary>') instead of a CHECK:, or say in tried: why live.py can't read it")
     # v3.6.7: an answer that adds to the profile (students, payments, health…) makes that module required too
     for a, why in adds.items():
         if a != "eu-users":

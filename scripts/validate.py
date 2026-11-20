@@ -38,7 +38,7 @@ def warn(m): warnings.append(m)
 skill_main = (SK / "SKILL.md").read_text()
 # Since v3.6 the step details live in workflow files that SKILL.md tells the agent to read at each step.
 # The content rules below apply to SKILL.md plus those files; the structure rules apply to SKILL.md itself.
-WORKFLOW = ["blind-spots.md", "ledger.md", "helper-brief.md", "reporting.md", "self-check.md", "fixing.md", "updating.md"]
+WORKFLOW = ["blind-spots.md", "ledger.md", "helper-brief.md", "reporting.md", "self-check.md", "fixing.md", "updating.md", "live-accounts.md"]
 skill = skill_main + "".join("\n\n" + (REFS / f).read_text() for f in WORKFLOW if (REFS / f).exists())
 
 # 1. frontmatter
@@ -458,6 +458,21 @@ for _name, _txt, _musts in [("SKILL.md", skill_main, ["no helpers", "coverage.py
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.9.1)")
 
+# 35. v4.0 live, read-only account checks
+_lv = (SK / "scripts" / "live.py").read_text() if (SK / "scripts" / "live.py").exists() else ""
+for _m in ["def is_read_only(", "class Refused", "--consent", "LIVE:", "default_transaction_read_only=on", "VIBE_CHECK_DB_URL", "def mask("]:
+    if _m not in _lv: err(f"live.py is missing '{_m}' (v4.0)")
+for _prov in ["p_github", "p_aws", "p_gcp", "p_azure", "p_firebase", "p_supabase", "p_vercel", "p_netlify", "p_prowler"]:
+    if f"def {_prov}(" not in _lv: err(f"live.py has no {_prov} (v4.0)")
+if re.search(r"^\s*(import|from)\s+(requests|urllib|http\.client|socket)\b", _lv, re.M): err("live.py must only call the user's own CLIs, never the network directly")
+for _m in ["def verify_live_row(", "without a recorded yes", "live_read"]:
+    if _m not in _cov: err(f"coverage.py is missing '{_m}' (v4.0)")
+_la = (REFS / "live-accounts.md").read_text() if (REFS / "live-accounts.md").exists() else ""
+for _m in ["LIVE: <provider>: yes", "read-only", "SecurityAudit", "never reads secret values", "Prowler"]:
+    if _m not in _la: err(f"live-accounts.md is missing '{_m}' (v4.0)")
+if "references/live-accounts.md" not in skill_main: err("SKILL.md must link references/live-accounts.md (v4.0)")
+if len(re.findall(r"^- \[ \] ", (REFS / "cloud-infra.md").read_text(), re.M)) < 45: err("cloud-infra.md should have the v4.0 account checks (45+)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -639,7 +654,7 @@ for must in ["npx skills update -g", "VIBE_CHECK_NO_UPDATE_CHECK", "## 🔄 Upda
 if re.search(r"phone home|nothing (?:is )?sent anywhere", readme, re.I) and "version check" not in readme.lower():
     err("README.md promises it never contacts anything, but doesn't mention the version check")
 
-for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "codemap.py", "autocheck.py", "appscan.py", "test_scripts.py", "release.sh"]:
+for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "codemap.py", "autocheck.py", "appscan.py", "live.py", "test_scripts.py", "release.sh"]:
     if f not in readme: err(f"README.md repo layout doesn't list {f}")
 for link in re.findall(r"\]\((?!https?://|#|mailto:)([^)]+)\)", readme):
     if not (ROOT / link.split("#")[0]).exists(): err(f"README.md links to missing file: {link}")

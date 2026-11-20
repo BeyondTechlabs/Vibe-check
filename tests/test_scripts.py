@@ -798,6 +798,51 @@ def main() -> int:
             check(r.returncode == 0 and "IOS-001" in rep and "MOB-004" in rep and "IOS-011" in rep and "NSCameraUsageDescription" in rep,
                   f"appscan: IPA findings wrong:\n{rep[:900]}")
 
+        # v4.0: live, read-only account checks (fake CLIs, no network)
+        import fake_clis
+        sys.path.insert(0, str(SCRIPTS))
+        import live as livemod
+        for argv_ in (["aws", "s3", "rm", "s3://x"], ["aws", "secretsmanager", "get-secret-value"], ["gcloud", "projects", "delete", "p"],
+                      ["az", "storage", "account", "delete"], ["gh", "api", "-X", "DELETE", "repos/a/b"], ["psql", "u", "-c", "delete from t"],
+                      ["psql", "u", "-c", "select 1; drop table t"], ["vercel", "env", "rm", "X"], ["firebase", "deploy"], ["curl", "http://x"]):
+            check(not livemod.is_read_only(argv_), f"live: the allow-list must refuse {' '.join(argv_)}")
+        for argv_ in (["aws", "iam", "list-users"], ["gcloud", "projects", "get-iam-policy", "p", "--format=json"], ["az", "account", "show", "-o", "json"],
+                      ["gh", "api", "repos/a/b"], ["psql", "u", "-At", "-c", "select 1"]):
+            check(livemod.is_read_only(argv_), f"live: the allow-list must allow {' '.join(argv_)}")
+        with tempfile.TemporaryDirectory() as tmpl:
+            fb = fake_clis.install(Path(tmpl) / "bin")
+            fenv = fake_clis.env_with(fb, VIBE_CHECK_DB_URL="postgresql://ro:x@db.abcd.supabase.co:5432/postgres")
+            lrun = lambda *a: subprocess.run([sys.executable, str(SCRIPTS / "live.py"), str(app), *a], capture_output=True, text=True, env=fenv)
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+            r = lrun("--run", "aws", "--consent")
+            check(r.returncode == 1 and "NOT RUN" in r.stdout and not (out / "live" / "aws.json").exists(), "live: no account is read without the user's recorded yes")
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nLIVE: aws: yes\nLIVE: github: yes\nLIVE: supabase: yes\nLIVE: vercel: yes\nLIVE: gcp: yes\nLIVE: azure: yes\n")
+            for prov in ("aws", "github", "supabase", "vercel", "gcp", "azure", "prowler-aws"):
+                r = lrun("--run", prov, "--consent")
+                check(r.returncode == 0 and (out / "live" / f"{prov}.json").exists(), f"live: {prov} should be read from the fake CLI:\n{r.stdout}{r.stderr[-300:]}")
+            summ = (out / "live" / "summary.md").read_text()
+            for rid in ("aws:iam-user-mfa", "aws:s3-account-public-access-block", "github:branch-protection", "supabase:rls", "vercel:public-env-secrets",
+                        "gcp:public-buckets", "azure:open-ports", "prowler-aws:prowler-cld-026"):
+                check(f"`{rid}`" in summ, f"live: {rid} missing from the summary")
+            check("123456789012" not in summ and "…9012" in summ, "live: AWS account IDs must be shortened to the last 4 characters")
+            res = json.loads((out / "live" / "aws.json").read_text())
+            mfa = next(x for x in res["results"] if x["id"] == "aws:iam-user-mfa")
+            base_rows = [x for x in full if not x.startswith(("| CLD-023 |", "| CLD-024 |"))] + inv_rows + hit_rows
+            good_live = f"| CLD-023 | FAIL 🔬 Confirmed | LIVE: aws:iam-user-mfa → {mfa['summary']} |"
+            r = run("coverage.py", str(ledger(out, base_rows + [good_live, next(x for x in full if x.startswith("| CLD-024 |"))])))
+            check("CLD-023:" not in r.stdout, f"live: a correct LIVE row should be accepted:\n{[l for l in r.stdout.splitlines() if 'CLD-023' in l]}")
+            r = run("coverage.py", str(ledger(out, base_rows + [good_live.replace("FAIL 🔬 Confirmed", "PASS"), next(x for x in full if x.startswith("| CLD-024 |"))])))
+            check("so the row must be FAIL" in r.stdout, "live: a LIVE row with the wrong verdict should be rejected")
+            r = run("coverage.py", str(ledger(out, base_rows + [good_live.replace(mfa["summary"], "all fine"), next(x for x in full if x.startswith("| CLD-024 |"))])))
+            check("copy the summary" in r.stdout, "live: a LIVE row with an edited summary should be rejected")
+            r = run("coverage.py", str(ledger(out, base_rows + [good_live, "| CLD-024 | CAN'T TELL | CHECK: AWS console → IAM → access keys older than 90 days · tried: `rg -i accesskey` found nothing |"])))
+            check("live aws account was read" in r.stdout, "live: a CHECK: for an account that was read live should be rejected")
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+            r = run("coverage.py", str(ledger(out, base_rows + [good_live, next(x for x in full if x.startswith("| CLD-024 |"))])))
+            check("without a recorded yes" in r.stdout, "live: LIVE evidence without the user's yes should be rejected")
+            shutil.rmtree(out / "live")
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+
         # v3.7 code map: every module part, and a helper can print just its own
         r = run("codemap.py", str(app))
         check(r.returncode == 0 and (out / "codemap.md").exists() and "## security" in (out / "codemap.md").read_text(), f"codemap: should write codemap.md:\n{r.stdout}{r.stderr}")

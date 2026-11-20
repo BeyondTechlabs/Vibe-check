@@ -1,8 +1,8 @@
-# vibe-check lite v3.9.1
+# vibe-check lite v4.0.0
 
 The short version of vibe-check for chat-based builders with a paste limit (Bolt, v0, ChatGPT, Gemini). It has the AI blind spots and every 🔴 launch blocker. For the full audit (650+ checks, helper scripts, hunt mode, live tests), install the skill: `npx skills add BeyondTechlabs/Vibe-check`.
 
-**First line of your reply:** `Running vibe-check lite v3.9.1 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
+**First line of your reply:** `Running vibe-check lite v4.0.0 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
 
 ## Rules
 1. **Audit first. Don't change code** until the user approves fixes.
@@ -189,6 +189,7 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 - 🔴 PLT-004 Storage buckets holding private files are **not public**, and storage policies check ownership.
 - 🔴 PLT-005 `security definer` functions and RPCs check the caller's permissions, set `search_path`, and aren't callable by `anon` unless intended.
 - 🔴 PLT-006 Views don't bypass RLS (use `security_invoker = true` on Postgres 15+).
+- 🔴 PLT-052 **The live database matches the repo**: every table the migrations protect with RLS has RLS on in the live database, and live policies aren't looser than the migrations (read with `live.py` and a read-only connection; drift means someone changed production by 
 - 🔴 PLT-011 Firestore, Realtime Database and Storage rules are not in test mode (`allow read, write: if true` or a date-based rule that expires).
 - 🔴 PLT-012 Rules check `request.auth.uid` against document ownership and validate the fields written (users can't set `role` or `isAdmin`).
 - 🔴 PLT-016 **Preview deployments**: don't use production DBs or live payment keys, and are protected (Vercel Deployment Protection) if they expose real data.
@@ -422,6 +423,11 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 - 🔴 CLD-011 **TLS on every public endpoint**: (load balancers, API gateways, CDNs), with HTTP redirected and old TLS versions disabled.
 - 🔴 CLD-014 **Secrets aren't in images or plain manifests**: use Kubernetes Secrets with encryption at rest, or an external secret manager.
 - 🔴 CLD-015 **Containers don't run as root or privileged**: unless required (`runAsNonRoot`, no `privileged: true`, read-only root filesystem where possible).
+- 🔴 CLD-023 **MFA on every human user**: every IAM user with a console password (AWS), every human principal (Google Cloud, Azure) uses MFA or signs in through SSO that enforces it.
+- 🔴 CLD-026 **Threat detection is on**: AWS GuardDuty, Google Security Command Center or Microsoft Defender for Cloud is enabled for production, and someone reads its findings.
+- 🔴 CLD-028 **Public access is blocked at the account level**: S3 account-wide Block Public Access, Google Cloud public access prevention, Azure `allowBlobPublicAccess: false`, so one wrong bucket setting can't expose data.
+- 🔴 CLD-030 **No public principals**: no IAM binding or policy grants `allUsers`, `allAuthenticatedUsers`, `*` or `AllUsers` access, except to assets meant to be public.
+- 🔴 CLD-032 **Snapshots and machine images aren't public**: database snapshots, disk snapshots and images are shared only with named accounts.
 
 ## Desktop apps and browser extensions
 

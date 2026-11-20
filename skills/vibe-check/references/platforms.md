@@ -14,6 +14,7 @@ Check the sections for the stack you found in Step 1. These are the problems tha
 - [ ] 🟡 PLT-008 Auth settings: email confirmation on, a sensible OTP expiry, leaked-password protection, redirect URLs restricted, and the rate limits reviewed.
 - [ ] 🟡 PLT-009 Using the connection pooler for serverless. Point-in-time recovery or backups on the right plan.
 - [ ] 🟡 PLT-010 Edge functions verify the JWT unless they're deliberately public (webhooks verify signatures instead).
+- [ ] 🔴 PLT-052 **The live database matches the repo:** every table the migrations protect with RLS has RLS on in the live database, and live policies aren't looser than the migrations (read with `live.py` and a read-only connection; drift means someone changed production by hand).
 
 ## Firebase / Firestore
 

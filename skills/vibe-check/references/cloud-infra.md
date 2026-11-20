@@ -33,3 +33,29 @@ Load this file when the app runs on AWS, Google Cloud, Azure, DigitalOcean, Hetz
 - [ ] 🟡 CLD-020 **Changes go through review and CI,** not manual console edits (drift is detected).
 - [ ] 🟡 CLD-021 **Backups and snapshots are automatic** for databases and volumes, and a restore has been tested (see `devops.md`).
 - [ ] 🟢 CLD-022 **Cost controls:** budgets and alerts, auto-scaling limits, and no forgotten resources (unused instances, load balancers, IPs, snapshots).
+
+## Account settings (read live with `live.py` when the user allows; otherwise from IaC files or `CHECK:`)
+- [ ] 🔴 CLD-023 **MFA on every human user:** every IAM user with a console password (AWS), every human principal (Google Cloud, Azure) uses MFA or signs in through SSO that enforces it.
+- [ ] 🟡 CLD-024 **No old or unused access keys:** user access keys and service account keys older than 90 days are rotated, and unused ones are deleted.
+- [ ] 🟡 CLD-025 **A strong password policy, or SSO only:** cloud console passwords have a length and reuse policy, or people sign in only through SSO.
+- [ ] 🔴 CLD-026 **Threat detection is on:** AWS GuardDuty, Google Security Command Center or Microsoft Defender for Cloud is enabled for production, and someone reads its findings.
+- [ ] 🟡 CLD-027 **Customer-managed keys rotate:** KMS / Cloud KMS / Key Vault keys used for data have automatic rotation on.
+- [ ] 🔴 CLD-028 **Public access is blocked at the account level:** S3 account-wide Block Public Access, Google Cloud public access prevention, Azure `allowBlobPublicAccess: false`, so one wrong bucket setting can't expose data.
+- [ ] 🟡 CLD-029 **Few owners and admins:** a handful of named people have owner/admin roles; no shared or personal email accounts own production.
+- [ ] 🔴 CLD-030 **No public principals:** no IAM binding or policy grants `allUsers`, `allAuthenticatedUsers`, `*` or `AllUsers` access, except to assets meant to be public.
+- [ ] 🟡 CLD-031 **Workloads don't use downloaded keys:** services use attached roles, workload identity or managed identities rather than long-lived key files.
+- [ ] 🔴 CLD-032 **Snapshots and machine images aren't public:** database snapshots, disk snapshots and images are shared only with named accounts.
+- [ ] 🟡 CLD-033 **Audit logs are kept and protected:** log file validation on (AWS), retention long enough to investigate an incident, and only a few people can delete them.
+- [ ] 🟡 CLD-034 **Storage requires modern TLS:** minimum TLS 1.2 on storage accounts and buckets (Azure `minimumTlsVersion`, an S3 policy denying non-TLS requests).
+- [ ] 🟡 CLD-035 **Secret stores can't be wiped by mistake:** Key Vault soft delete and purge protection; Secrets Manager / Secret Manager recovery windows.
+- [ ] 🟡 CLD-036 **Load balancers use a modern TLS policy** and redirect HTTP to HTTPS.
+- [ ] 🟡 CLD-037 **Databases are protected from loss:** automated backups with a retention period, and deletion protection on production databases.
+- [ ] 🟡 CLD-038 **Production doesn't live in the default network,** and network flow logs are on where incidents would need them.
+- [ ] 🟡 CLD-039 **Serverless functions aren't open to anyone** (Lambda function URLs with `AuthType NONE`, unauthenticated Cloud Functions/Run, anonymous Azure Functions) unless they're meant to be public and check their callers.
+- [ ] 🟡 CLD-040 **Container registries are private** and scan images for known vulnerabilities.
+- [ ] 🟡 CLD-041 **Alerts for risky account events:** root/owner sign-ins, IAM policy changes and disabled logging alert a person.
+- [ ] 🟡 CLD-042 **Function environment variables hold no plain secrets:** Lambda, Cloud Functions and App Service settings reference a secret store instead.
+- [ ] 🟡 CLD-043 **Kubernetes RBAC is tight:** no `cluster-admin` for default or workload service accounts, and namespaces separate teams or apps.
+- [ ] 🟡 CLD-044 **Kubernetes network policies** restrict which pods can talk to which, and to the internet.
+- [ ] 🟡 CLD-045 **Kubernetes control-plane audit logs are on** and kept.
+

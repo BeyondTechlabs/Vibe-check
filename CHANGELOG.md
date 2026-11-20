@@ -1,5 +1,23 @@
 # Changelog
 
+## v4.0.0 (2026-11-20)
+
+**Live account checks: vibe-check can now read your real cloud and platform settings, read-only, after you say yes.**
+- **New `live.py`:**
+  - `--detect` lists which tools are installed and look signed in, reading nothing.
+  - After you agree (recorded as `LIVE: <provider>: yes`), `--run <provider> --consent` reads that account: **GitHub, Firebase, Supabase, Vercel, Netlify, AWS, Google Cloud, Azure**, and **Prowler** for deep AWS, Google Cloud and Azure scans.
+- **Read-only, enforced by the script:**
+  - only list, describe, get, show and view commands on a fixed allow-list run; anything else is refused;
+  - Supabase is read through a read-only connection you set yourself (`VIBE_CHECK_DB_URL`), with SELECT-only queries in a read-only transaction;
+  - it uses your existing logins, never asks for or prints keys, never reads secret values or your data, and shortens account IDs to the last 4 characters;
+  - results stay in `.vibe-check/live/`.
+- **Proof that can't be faked:** findings are written `LIVE: <result id> → <summary>`. `coverage.py` checks each against the saved result, the check it belongs to, its verdict, its age (30 days) and your recorded yes. A "check yourself" item pointing at an account that was read live is refused.
+- **Cloud checks: 22 → 45.** New: MFA for every human, old keys, password policy, threat detection, key rotation, account-wide public access blocking, owner sprawl, public principals, downloaded service account keys, public snapshots, audit log protection, TLS minimums, secret store recovery, database backups and deletion protection, open serverless functions, private registries, risky-event alerts, secrets in function settings, and Kubernetes RBAC, network policies and audit logs.
+- **Drift:** PLT-052 flags tables that the migrations protect with RLS but that are unprotected in the live database.
+- **Many dashboard items now settle themselves:** GitHub (secret scanning, push protection, branch protection, token permissions, Dependabot, organisation 2FA), Supabase (RLS, open policies, views, public buckets), Firebase (separate projects, API key restrictions), Vercel and Netlify (secrets in browser-visible variables, checked by name only).
+- **New reference `live-accounts.md`;** two new fix recipes (cloud account guardrails, database drift).
+- **Tests** use fake command-line tools for every provider: no real account or network is touched, and the allow-list is tested against 10 write or dangerous commands.
+
 ## v3.9.1 (2026-11-20)
 
 **Lighter runs, far fewer questions, and a new tagline: "Find what breaks before your users do".**

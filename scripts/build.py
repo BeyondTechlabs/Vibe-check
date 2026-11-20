@@ -59,12 +59,13 @@ REF_ORDER = [
     "sweep-patterns.md",
     "standards.md",
     "updating.md",
+    "live-accounts.md",
 ]
 DESCRIPTION = (
     "Audits AI-built (vibe-coded) apps before launch: security, auth, data, reliability, "
     "known vulnerabilities, ops, AI features, legal/privacy and UX. Not a visual design review."
 )
-WORKFLOW_FILES = {"blind-spots.md", "ledger.md", "helper-brief.md", "reporting.md", "self-check.md", "fixing.md", "updating.md"}
+WORKFLOW_FILES = {"blind-spots.md", "ledger.md", "helper-brief.md", "reporting.md", "self-check.md", "fixing.md", "updating.md", "live-accounts.md"}
 CONTENTS_OPEN = "<!-- contents: kept up to date by scripts/build.py -->"
 CONTENTS_CLOSE = "<!-- /contents -->"
 
