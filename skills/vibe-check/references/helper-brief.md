@@ -9,6 +9,7 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 
 ## Rules (the same as the main run)
 1. **Read the whole module file first**, then check **every one of your IDs** in it, one by one. Never from memory, never a sample.
+   - **Your checks:** run `python3 <skill-folder>/scripts/coverage.py --brief <your module>`: it prints just the check lines you must do (your IDs from `.vibe-check/redo.md`), without the module's prose. Read the full module file only for a check whose line isn't enough.
    - **Your IDs** are your module's line in `.vibe-check/redo.md`. Checks carried over from the last run (`ledger.d/00-carried.md`) or settled by `autocheck.py` (`ledger.d/01-auto.md`) are done: don't re-check or rewrite them.
    - **Start from the code map:** `python3 <skill-folder>/scripts/codemap.py --module <your module>` lists the files and line numbers where your module's topics appear. Open those lines with some context (for example 20 lines around each); open a whole file only when a check needs it. Search (`rg`) for anything the map didn't point to; don't re-read the whole project.
 2. **Evidence or it didn't happen.** Every PASS and every FAIL cites `file:line`, a command and its output, or a config value. Every FAIL **quotes** the exact lines, re-read just now. `coverage.py` re-opens every file and rejects quotes that don't match.
@@ -35,3 +36,5 @@ Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` 
 
 ## You return
 Post one line when you start and one when you finish (`✅ security · 83 checks · 2 blockers`). Return only a short summary to the main agent: the module, how many checks, and the counts of PASS, FAIL, N/A and CAN'T TELL, plus the IDs of any 🔴 FAIL. The details are in your ledger file.
+
+**Before you finish:** run `python3 <skill-folder>/scripts/coverage.py .vibe-check/ledger.md --part .vibe-check/ledger.d/<your module>.md` and fix every problem it lists in your rows, until it prints `PART OK`. There is no tidy-up pass after you.

@@ -19,8 +19,8 @@ Sources: OWASP MASVS and MASTG (Android tests), Android developer security guida
 
 ## Network
 - [ ] 🔴 AND-010 **The network security config is safe in release:** no cleartext except named domains with a reason, user-installed certificate authorities aren't trusted outside `<debug-overrides>`, and no `<trust-anchors>` that accept any certificate.
-- [ ] 🔴 AND-011 **TLS checking is never switched off:** no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
-- [ ] 🟡 AND-012 **Certificate pinning where money or health data moves**, with backup pins and an expiry or rotation plan so a certificate change can't lock every user out.
+- [ ] 🔴 AND-011 **Android TLS checking is never switched off:** no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
+- [ ] 🟡 AND-012 **Android certificate pinning where money or health data moves**, with backup pins and an expiry or rotation plan so a certificate change can't lock every user out.
 
 ## WebViews and links
 - [ ] 🔴 AND-013 **WebViews are configured for what they load:** JavaScript only when needed; `addJavascriptInterface` only for your own bundled content, never remote pages; `setAllowFileAccess(false)`, `setAllowFileAccessFromFileURLs(false)` and `setAllowUniversalAccessFromFileURLs(false)` unless a feature needs them; URLs checked in `shouldOverrideUrlLoading`.

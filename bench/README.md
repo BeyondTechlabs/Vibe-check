@@ -36,4 +36,4 @@ Record the result in the table below with the vibe-check version, tool and model
 
 | Date | vibe-check | Tool and model | Found |
 |---|---|---|---|
-| | | | |
+| 2026-11-20 | 3.9.0 | Claude desktop app (Code), Opus 5.5, medium effort | 20 / 20, checked against the report text (all 20 are findings in the blockers; 8 settled by script) |

@@ -444,6 +444,20 @@ for _f in ["codemap.py", "inventory.py", "sweep.py", "profile.py", "versions.py"
 if not (ROOT / "bench" / "mobile-answers.json").exists() or not (ROOT / "bench" / "mobile-app").is_dir(): err("bench/mobile-app and bench/mobile-answers.json are missing (v3.9)")
 if "appscan.py" not in (REFS / "mobile.md").read_text(): err("mobile.md must say when to use appscan.py (ask first) (v3.9)")
 
+# 34. v3.9.1 lighter runs: sized helpers, check lines only, helpers check their own rows, fewer questions, new tagline
+for _m in ["def print_brief(", "--brief", "--part", "PART OK", "def app_size(", "aren't listed under", "up to 15"]:
+    if _m not in _cov: err(f"coverage.py is missing '{_m}' (v3.9.1)")
+if "def size_plan(" not in (SK / "scripts" / "codemap.py").read_text(): err("codemap.py must print the app size and work plan (v3.9.1)")
+_pdf2 = (SK / "scripts" / "report_pdf.py").read_text()
+for _m in ['TAGLINE = "Find what breaks before your users do"', 'SUBLINE = "Security, privacy and launch audit for web and mobile apps"']:
+    if _m not in _pdf2: err(f"report_pdf.py is missing {_m} (v3.9.1)")
+if "AI-BUILT" in _pdf2 or "AI-BUILT" in (ROOT / "scripts" / "banner.py").read_text(): err("the old 'AI-built apps' tagline is still on the PDF or banner")
+for _name, _txt, _musts in [("SKILL.md", skill_main, ["no helpers", "coverage.py --part", "up to 15", "Re-check"]),
+                            ("helper-brief.md", _hb, ["coverage.py --brief", "--part", "PART OK"]),
+                            ("reporting.md", _rep, ["at most 15 in all", "Never ask what the files can answer", "Questions for a lawyer"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.9.1)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")

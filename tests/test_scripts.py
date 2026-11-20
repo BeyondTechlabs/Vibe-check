@@ -398,6 +398,16 @@ def main() -> int:
         (out / "answers.md").write_text("nothing yet\n")
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 1 and "weren't asked" in r.stdout, "questions: an unasked ❓ question should block the report")
+        # v3.9.1: after 15 questions, the rest are listed in the report instead of asked
+        fifteen = "".join(f"| ZZQ-{k:03d} | asked earlier | yes |\n" for k in range(15))
+        (out / "answers.md").write_text(fifteen)
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check("weren't asked" not in r.stdout and "aren't listed under" in r.stdout and ask_id in r.stdout,
+              f"questions: past 15 asked, an open question must be listed under 'Questions for you':\n{r.stdout[-400:]}")
+        report.write_text(report.read_text() + f"\n## ❓ Questions for you\n\n1. {ask_id}: who may see this?\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check("aren't listed under" not in r.stdout, f"questions: a listed open question is fine:\n{r.stdout[-400:]}")
+        report.write_text(good_report)
         (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
         # every blocker needs a fix prompt (or steps for the user), and the score card counts problems and checks
         report.write_text(good_report.replace("- **Prompt to fix it:** fix the planted thing", "- fix it somehow"))
@@ -672,6 +682,29 @@ def main() -> int:
         r = run("coverage.py", str(ledger(out, [x for x in full if not x.startswith("| OPS-001 |")] + ["| OPS-001 | FAIL 🔬 Confirmed | AUTO: no CI anywhere, trust me |"] + inv_rows + hit_rows)))
         check(r.returncode == 1 and "AUTO" in r.stdout and "autocheck.py" in r.stdout, f"autocheck: a hand-typed AUTO row must be rejected:\n{r.stdout[-300:]}")
 
+        # v3.9.1: --brief gives a helper only its to-do check lines; --part checks only a helper's own rows
+        (out / "redo.md").write_text("# Checks to do\n\n## security (2)\nSEC-001, SEC-002\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--brief", "security")
+        check(r.returncode == 0 and "SEC-001" in r.stdout and "SEC-002" in r.stdout and "SEC-003" not in r.stdout and "2 check(s) to do" in r.stdout,
+              f"brief: should print only the to-do lines:\n{r.stdout[:400]}")
+        (out / "redo.md").unlink()
+        sec1 = next(x for x in full if x.startswith("| SEC-001 |"))
+        lp = ledger(out, [x for x in full if x is not sec1] + inv_rows + hit_rows)
+        (out / "ledger.d").mkdir(exist_ok=True)
+        (out / "ledger.d" / "security.md").write_text("| ID | Result | Evidence |\n|---|---|---|\n| SEC-001 | PASS | looks fine to me |\n")
+        r = run("coverage.py", str(lp), "--part", str(out / "ledger.d" / "security.md"))
+        check(r.returncode == 1 and "SEC-001" in r.stdout and "PART:" in r.stdout, f"part: a bad row in the helper's file should be listed:\n{r.stdout[-400:]}")
+        (out / "ledger.d" / "security.md").write_text("| ID | Result | Evidence |\n|---|---|---|\n" + sec1 + "\n")
+        r = run("coverage.py", str(lp), "--part", str(out / "ledger.d" / "security.md"))
+        check(r.returncode == 0 and "PART OK" in r.stdout, f"part: a good helper file should pass:\n{r.stdout[-400:]}")
+        shutil.rmtree(out / "ledger.d")
+        smp = {f"P-{k:03d}": ("PASS", "x.ts:1 ok", "") for k in range(40)}
+        smp.update({f"F-{k:03d}": ("FAIL", "x.ts:2 bad", "Confirmed") for k in range(30)})
+        cks = {c: ("m", "🔴", "t") for c in smp}
+        small = cov2.sample_ids(smp, cks, "seed", "small"); normal = cov2.sample_ids(smp, cks, "seed", None)
+        check(sum(c.startswith("P-") for c in small) == 5 and sum(c.startswith("P-") for c in normal) == 12 and sum(c.startswith("F-") for c in small) == 25,
+              "re-check: a small app samples 5 passes, others 12; every 🔴 failure up to 25")
+
         # v3.8: build, lint and tests run only after the user said yes
         tools = "\n\n## Tools run\n\n| Tool | Command | Result |\n|---|---|---|\n| tests | `npm test` | 12 passed |\n"
         lp = ledger(out, full + inv_rows + hit_rows)
@@ -731,7 +764,8 @@ def main() -> int:
             r = subprocess.run([sys.executable, str(bench / "score.py"), str(tm / ".vibe-check" / "ledger.md"), str(bench / "mobile-answers.json")],
                                capture_output=True, text=True)
             check(r.returncode == 0 and "found 8 of 20" in r.stdout, f"mobile bench: the scripts alone should find 8 of 20:\n{r.stdout}{r.stderr}")
-            run("codemap.py", str(tm))
+            r = run("codemap.py", str(tm))
+            check("app size: small" in r.stdout and "no helpers" in r.stdout, f"codemap: a small app should get the no-helpers plan:\n{r.stdout}")
             check(".dart_tool" not in (tm / ".vibe-check" / "codemap.md").read_text(), "mobile: the code map must skip .dart_tool")
             r = run("sweep.py", str(tm))
             check("leak.dart" not in (tm / ".vibe-check" / "sweep.md").read_text(), "mobile: the sweep must skip .dart_tool")

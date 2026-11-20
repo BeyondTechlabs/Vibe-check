@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="vibe-check: pre-launch audit for AI-built apps" width="100%">
+<img src="assets/banner.svg" alt="vibe-check: find what breaks before your users do" width="100%">
 
-**Find and fix what your AI coding agent misses, before real users do.**
+**Find what breaks before your users do.**
 
-Security · privacy · legal · reliability · launch, checked against your actual code, without changing what you built.
+Security, privacy and launch audit for web and mobile apps: checked against your actual code, with evidence for every check, without changing what you built.
 
 [![Release](https://img.shields.io/github/v/release/BeyondTechlabs/Vibe-check?style=for-the-badge&color=22c55e&label=release)](https://github.com/BeyondTechlabs/Vibe-check/releases/latest)
 [![Checks](https://img.shields.io/badge/checks-741-18181b?style=for-the-badge)](skills/vibe-check/references)

@@ -1,9 +1,9 @@
 ---
 name: vibe-check
-description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
+description: Audits web and mobile apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?".
 license: MIT
 metadata:
-  version: "3.9.0"
+  version: "3.9.1"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
@@ -77,7 +77,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in `references/fixing.md`.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
-10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps a pass or N/A whose check and cited files are unchanged (re-proved at every count); skip it when the user asks for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
+10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps unchanged checks (re-proved at every count); skip it for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
 12. **No facts from memory.** Legal, regulatory, platform-policy and pricing statements come from this skill's reference files or a source you opened during this run (give the URL), never from memory. If unsure, make it a question for the user or the lawyer list.
 15. **Never go quiet.** Post a short line when each step or helper starts and finishes, and every couple of minutes during long work. Time-limit long commands.
@@ -126,7 +126,7 @@ The questions (answer from the code first, then ask only what's left, as choices
 6. **Can it run for testing?** Locally, or on a staging or preview URL? (Running it is asked separately; never production.)
 7. **What kind of product?** Web app, mobile app, desktop app, browser extension, API or SDK. Can users post, chat or trade with each other? Does it support several languages? Does an AI agent take actions, or is it an MCP server? Which cloud does it run on?
 
-Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time**: *Full (Recommended): every check that applies, about 20–60 minutes by size* · *Quick: blind spots and blockers only, about 10–15 minutes*. Never downgrade on your own.
+Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time and cost**: *Full (Recommended): every check that applies, about 20–60 minutes by size, a large share of a session* · *Quick: blind spots and blockers, about 10–15 minutes, much lighter*. "Re-check" after fixes is Full with `--carry` (only fixed, failed and changed items redone). Never downgrade on your own.
 
 | Level | When | Covers |
 |---|---|---|
@@ -173,7 +173,7 @@ Then write down:
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, write its rows immediately. On a big app, resume with `coverage.py --remaining` rather than getting shallower.
 - **Evidence is checked:** `coverage.py` re-opens every cited `file:line` and quoted line. Re-read before you quote.
-- **Split the work when you can.** In tools with helper agents, give each module (or group of small modules) to a fresh helper, **pasting `references/helper-brief.md` in full** plus the module name, its IDs from `.vibe-check/redo.md` and `codemap.py --module <name>`. Simple modules may use a faster model where the tool allows; blind spots, security, payments, the hunt and the re-check never do. Each helper writes `.vibe-check/ledger.d/<module>.md`, which `coverage.py` reads with the main ledger.
+- **Split the work by app size** (`codemap.py` prints the plan): small apps use **no helpers**; medium apps 2–3; large apps one per area. A helper gets `references/helper-brief.md` in full, writes `.vibe-check/ledger.d/<module>.md`, and checks it with `coverage.py --part` before finishing. Simple modules may use a faster model; blind spots, security, payments, the hunt and the re-check never do.
 
 **Core modules** (Full and Enterprise, every one):
 
@@ -244,7 +244,7 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 ## Step 5: Report
 
 **Read `references/reporting.md` now and follow it.** In short:
-0. **First ask the `ASK:` questions**, as choices (4 a round, *Skip the rest* allowed), update the ledger and `.vibe-check/answers.md`.
+0. **Ask only the questions that matter** (🔴/🟡, most serious first, up to 15), as choices; list the rest under *❓ Questions for you*.
 1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, Score N/100 and band, *Since last check*, totals, area scorecard), coverage and Standards tables (mapping in `references/standards.md`; a coverage view, never a certification). Never type a number.
 2. Write the full report in the format of `references/report-template.md`: ❌ blockers with evidence, recipe, safe to auto-fix and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
 3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, `coverage.py --save`, and `report_pdf.py <report>` (the branded PDF).

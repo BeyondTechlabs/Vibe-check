@@ -8,8 +8,8 @@ Sources: OWASP MASVS and MASTG (iOS tests), Apple Platform Security guide, Apple
 
 ## Network
 - [ ] 🔴 IOS-001 **App Transport Security exceptions are narrow:** only per-domain exceptions under `NSExceptionDomains`, each with a reason; no `NSAllowsArbitraryLoadsInWebContent` or `NSAllowsArbitraryLoadsForMedia` unless a feature needs it; the minimum TLS version isn't lowered.
-- [ ] 🔴 IOS-002 **TLS checking is never switched off:** no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
-- [ ] 🟡 IOS-003 **Certificate pinning where money or health data moves**, with backup pins and a rotation plan, so a certificate change can't lock every user out.
+- [ ] 🔴 IOS-002 **iOS TLS checking is never switched off:** no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
+- [ ] 🟡 IOS-003 **iOS certificate pinning where money or health data moves**, with backup pins and a rotation plan, so a certificate change can't lock every user out.
 
 ## Keys, files and backups
 - [ ] 🔴 IOS-004 **Secrets live in the Keychain with the right accessibility:** a `...ThisDeviceOnly` or `AfterFirstUnlock` class suited to the use, never the deprecated `kSecAttrAccessibleAlways`; no tokens or keys in `UserDefaults`, plists or files in the app container.

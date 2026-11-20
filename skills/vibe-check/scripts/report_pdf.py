@@ -18,7 +18,9 @@ HERE = Path(__file__).resolve().parent
 W, H = 595.28, 841.89                     # A4
 ML, MR, MT, MB = 48, 48, 66, 50           # margins (top leaves room for the brand band)
 CW = W - ML - MR
-FIRST_TOP = 118                           # page 1 has the tall band with the full logo
+TAGLINE = "Find what breaks before your users do"
+SUBLINE = "Security, privacy and launch audit for web and mobile apps"
+FIRST_TOP = 136                           # page 1 has the tall band with the full logo
 
 # ---- brand ----
 INK = (0.043, 0.043, 0.047)               # #0b0b0c, the banner background
@@ -428,21 +430,23 @@ def brand(doc, ops, n, total):
     def c(rgb):
         pre.append("%.3f %.3f %.3f rg" % rgb)
     if n == 1:      # the cover band, like the README banner
-        bh = 104
+        bh = 120
         c(INK); pre.append("0 %.2f %.2f %d re f" % (H - bh, W, bh))
         c(GREEN); pre.append("0 %.2f %.2f 2.5 re f" % (H - bh - 2.5, W))
         pitch = 5.2
         lx = (W - 58 * pitch) / 2
         pre.append(logo_ops(lx, H - 24, pitch))
-        sub = "PRE-LAUNCH AUDIT FOR AI-BUILT APPS"
+        sub = TAGLINE.upper()
         size, track = 8.6, 2.6
         sw = len(sub) * 600 * size / 1000 + track * (len(sub) - 1)
-        pre.append("BT /F4 %.1f Tf %.2f Tc %.2f %.2f Td 0.631 0.631 0.667 rg %s Tj ET 0 Tc" % (size, track, (W - sw) / 2, H - 78, pdf_str(sub)))
+        pre.append("BT /F4 %.1f Tf %.2f Tc %.2f %.2f Td 0.900 0.900 0.910 rg %s Tj ET 0 Tc" % (size, track, (W - sw) / 2, H - 76, pdf_str(sub)))
+        sw2 = width(SUBLINE, "R", 9)
+        pre.append("BT /F1 9 Tf %.2f %.2f Td 0.631 0.631 0.667 rg %s Tj ET" % ((W - sw2) / 2, H - 91, pdf_str(SUBLINE)))
         tag = (doc.project + " · " if doc.project else "") + (doc.date or "")
         if tag:
             tw_ = width(tag, "R", 8)
-            c(GREEN); pre.append(circle((W - tw_) / 2 - 8, H - 93.4, 2.5))
-            pre.append("BT /F1 8 Tf %.2f %.2f Td 0.443 0.443 0.478 rg %s Tj ET" % ((W - tw_) / 2, H - 96, pdf_str(tag)))
+            c(GREEN); pre.append(circle((W - tw_) / 2 - 8, H - 107.4, 2.5))
+            pre.append("BT /F1 8 Tf %.2f %.2f Td 0.443 0.443 0.478 rg %s Tj ET" % ((W - tw_) / 2, H - 110, pdf_str(tag)))
     else:           # a slim band with the small logo
         c(INK); pre.append("0 %.2f %.2f 40 re f" % (H - 40, W))
         c(GREEN); pre.append("0 %.2f %.2f 2 re f" % (H - 42, W))

@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.9.1 (2026-11-20)
+
+**Lighter runs, far fewer questions, and a new tagline: "Find what breaks before your users do".**
+- **Helpers sized to the app.** `codemap.py` prints the app's size and the plan:
+  - small apps (about 50 code files or fewer) use no helpers: one session reads the code once;
+  - medium apps use 2–3 helpers;
+  - large apps keep one helper per area.
+
+  A full check of the 20-file test app used about 1.08 million tokens with 8 helpers, mostly fixed cost repeated per helper.
+- **Helpers read only their checks:** `coverage.py --brief <module>` prints just the check lines a helper must do (its IDs from `redo.md`), without the module's prose.
+- **No tidy-up pass:** each helper runs `coverage.py --part ledger.d/<module>.md` on its own rows and fixes them before finishing (`PART OK`).
+- **Re-check sized to the app:** every 🔴 failure (up to 25) plus 5 passes on a small app, or 12 otherwise; carried and script-settled rows are left out, because the scripts already prove them.
+- **"Re-check" after fixes** is a Full count with carried rows, so only fixed, failed and changed items are redone.
+- **Cost said up front:** the Full/Quick question gives the time and how heavy each is.
+- **Far fewer questions:**
+  - only 🔴/🟡 questions, and ones that change which checks apply, are asked: most serious first, at most 15;
+  - the rest are listed under *❓ Questions for you*, and `--verify-report` refuses a report that drops one;
+  - nothing the code or config can answer is asked; legal judgement calls go to the lawyer list;
+  - store preparation is a checklist, not questions.
+- **New tagline:** "Find what breaks before your users do", with "Security, privacy and launch audit for web and mobile apps", on the PDF cover, the README banner and headline, and the skill's description ("Audits web and mobile apps before launch…").
+- **Mobile test app:** placeholder files for the screens, `MainActivity`, `Points` and `NativeBridge`, so runs don't stall on missing files (no new planted problems). First result: 20 of 20 on v3.9.0.
+- **Distinct names** for the Android and iOS TLS and pinning checks, which clears the release warnings.
+
 ## v3.9.0 (2026-11-20)
 
 **Mobile scripts, and a mobile test app to prove it.**

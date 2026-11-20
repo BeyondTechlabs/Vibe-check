@@ -70,7 +70,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
-10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps a pass or N/A whose check and cited files are unchanged (re-proved at every count); skip it when the user asks for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
+10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps unchanged checks (re-proved at every count); skip it for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
 12. **No facts from memory.** Legal, regulatory, platform-policy and pricing statements come from this skill's reference files or a source you opened during this run (give the URL), never from memory. If unsure, make it a question for the user or the lawyer list.
 15. **Never go quiet.** Post a short line when each step or helper starts and finishes, and every couple of minutes during long work. Time-limit long commands.
@@ -119,7 +119,7 @@ The questions (answer from the code first, then ask only what's left, as choices
 6. **Can it run for testing?** Locally, or on a staging or preview URL? (Running it is asked separately; never production.)
 7. **What kind of product?** Web app, mobile app, desktop app, browser extension, API or SDK. Can users post, chat or trade with each other? Does it support several languages? Does an AI agent take actions, or is it an MCP server? Which cloud does it run on?
 
-Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time**: *Full (Recommended): every check that applies, about 20–60 minutes by size* · *Quick: blind spots and blockers only, about 10–15 minutes*. Never downgrade on your own.
+Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time and cost**: *Full (Recommended): every check that applies, about 20–60 minutes by size, a large share of a session* · *Quick: blind spots and blockers, about 10–15 minutes, much lighter*. "Re-check" after fixes is Full with `--carry` (only fixed, failed and changed items redone). Never downgrade on your own.
 
 | Level | When | Covers |
 |---|---|---|
@@ -166,7 +166,7 @@ Then write down:
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, write its rows immediately. On a big app, resume with `coverage.py --remaining` rather than getting shallower.
 - **Evidence is checked:** `coverage.py` re-opens every cited `file:line` and quoted line. Re-read before you quote.
-- **Split the work when you can.** In tools with helper agents, give each module (or group of small modules) to a fresh helper, **pasting the **helper-brief** section below in full** plus the module name, its IDs from `.vibe-check/redo.md` and `codemap.py --module <name>`. Simple modules may use a faster model where the tool allows; blind spots, security, payments, the hunt and the re-check never do. Each helper writes `.vibe-check/ledger.d/<module>.md`, which `coverage.py` reads with the main ledger.
+- **Split the work by app size** (`codemap.py` prints the plan): small apps use **no helpers**; medium apps 2–3; large apps one per area. A helper gets the **helper-brief** section below in full, writes `.vibe-check/ledger.d/<module>.md`, and checks it with `coverage.py --part` before finishing. Simple modules may use a faster model; blind spots, security, payments, the hunt and the re-check never do.
 
 **Core modules** (Full and Enterprise, every one):
 
@@ -237,7 +237,7 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 ## Step 5: Report
 
 **Read the **reporting** section below now and follow it.** In short:
-0. **First ask the `ASK:` questions**, as choices (4 a round, *Skip the rest* allowed), update the ledger and `.vibe-check/answers.md`.
+0. **Ask only the questions that matter** (🔴/🟡, most serious first, up to 15), as choices; list the rest under *❓ Questions for you*.
 1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, Score N/100 and band, *Since last check*, totals, area scorecard), coverage and Standards tables (mapping in the **standards** section below; a coverage view, never a certification). Never type a number.
 2. Write the full report in the format of the **report-template** section below: ❌ blockers with evidence, recipe, safe to auto-fix and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
 3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, `coverage.py --save`, and `report_pdf.py <report>` (the branded PDF).
@@ -316,7 +316,7 @@ Date: YYYY-MM-DD
 ```
 
 - **Results:** `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL`. Every row needs its own evidence or reason. Copy-pasted evidence is rejected.
-- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look. `ASK:` items are asked before the report (see the **reporting** section); `CHECK:` items become the *Check these yourself* list.
+- **`CAN'T TELL` says which kind it is,** first thing in the reason: `ASK:` when a tap or a short answer from the user settles it (a business rule, whether an old deployment still runs), or `CHECK:` when only the user can look. `ASK:` items are asked before the report when they matter (🔴/🟡, up to 15; see the **reporting** section), and listed in it otherwise; never write `ASK:` for what the code or config can answer, or for a legal judgement call (that goes on the lawyer list); `CHECK:` items become the *Check these yourself* list.
 - **Settle it yourself first; `CHECK:` is the last resort.** Before writing either, work through this order, and stop at the first that settles it:
   1. **The code:** search and read it (`rg`, the files, the migrations, the config). If the code shows it, it's PASS or FAIL. "It's a lot of files" is never a reason for `CHECK:`.
   2. **The database, read-only:** policies, grants, functions, views, cron jobs, tables (audit logs, roles), storage buckets. With access, write `SQL: <query> → <result>` as evidence. Without it, ask once, as a choice: *"May I read your database, read-only? It settles N checks."* and write `DATABASE: yes` or `DATABASE: no` in `.vibe-check/answers.md`. Backups and restores are dashboard items, not SQL.
@@ -368,6 +368,7 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 
 ### Rules (the same as the main run)
 1. **Read the whole module file first**, then check **every one of your IDs** in it, one by one. Never from memory, never a sample.
+   - **Your checks:** run `python3 <skill-folder>/scripts/coverage.py --brief <your module>`: it prints just the check lines you must do (your IDs from `.vibe-check/redo.md`), without the module's prose. Read the full module file only for a check whose line isn't enough.
    - **Your IDs** are your module's line in `.vibe-check/redo.md`. Checks carried over from the last run (`ledger.d/00-carried.md`) or settled by `autocheck.py` (`ledger.d/01-auto.md`) are done: don't re-check or rewrite them.
    - **Start from the code map:** `python3 <skill-folder>/scripts/codemap.py --module <your module>` lists the files and line numbers where your module's topics appear. Open those lines with some context (for example 20 lines around each); open a whole file only when a check needs it. Search (`rg`) for anything the map didn't point to; don't re-read the whole project.
 2. **Evidence or it didn't happen.** Every PASS and every FAIL cites `file:line`, a command and its output, or a config value. Every FAIL **quotes** the exact lines, re-read just now. `coverage.py` re-opens every file and rejects quotes that don't match.
@@ -394,6 +395,8 @@ Results: `PASS`, `FAIL 🔬 Confirmed`, `FAIL 🔎 Likely`, `N/A`, `CAN'T TELL` 
 
 ### You return
 Post one line when you start and one when you finish (`✅ security · 83 checks · 2 blockers`). Return only a short summary to the main agent: the module, how many checks, and the counts of PASS, FAIL, N/A and CAN'T TELL, plus the IDs of any 🔴 FAIL. The details are in your ledger file.
+
+**Before you finish:** run `python3 <skill-folder>/scripts/coverage.py .vibe-check/ledger.md --part .vibe-check/ledger.d/<your module>.md` and fix every problem it lists in your rows, until it prints `PART OK`. There is no tidy-up pass after you.
 
 <a id="security"></a>
 
@@ -1477,8 +1480,8 @@ Sources: OWASP MASVS and MASTG (Android tests), Android developer security guida
 
 ### Network
 - [ ] 🔴 AND-010 **The network security config is safe in release:** no cleartext except named domains with a reason, user-installed certificate authorities aren't trusted outside `<debug-overrides>`, and no `<trust-anchors>` that accept any certificate.
-- [ ] 🔴 AND-011 **TLS checking is never switched off:** no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
-- [ ] 🟡 AND-012 **Certificate pinning where money or health data moves**, with backup pins and an expiry or rotation plan so a certificate change can't lock every user out.
+- [ ] 🔴 AND-011 **Android TLS checking is never switched off:** no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
+- [ ] 🟡 AND-012 **Android certificate pinning where money or health data moves**, with backup pins and an expiry or rotation plan so a certificate change can't lock every user out.
 
 ### WebViews and links
 - [ ] 🔴 AND-013 **WebViews are configured for what they load:** JavaScript only when needed; `addJavascriptInterface` only for your own bundled content, never remote pages; `setAllowFileAccess(false)`, `setAllowFileAccessFromFileURLs(false)` and `setAllowUniversalAccessFromFileURLs(false)` unless a feature needs them; URLs checked in `shouldOverrideUrlLoading`.
@@ -1516,8 +1519,8 @@ Sources: OWASP MASVS and MASTG (iOS tests), Apple Platform Security guide, Apple
 
 ### Network
 - [ ] 🔴 IOS-001 **App Transport Security exceptions are narrow:** only per-domain exceptions under `NSExceptionDomains`, each with a reason; no `NSAllowsArbitraryLoadsInWebContent` or `NSAllowsArbitraryLoadsForMedia` unless a feature needs it; the minimum TLS version isn't lowered.
-- [ ] 🔴 IOS-002 **TLS checking is never switched off:** no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
-- [ ] 🟡 IOS-003 **Certificate pinning where money or health data moves**, with backup pins and a rotation plan, so a certificate change can't lock every user out.
+- [ ] 🔴 IOS-002 **iOS TLS checking is never switched off:** no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
+- [ ] 🟡 IOS-003 **iOS certificate pinning where money or health data moves**, with backup pins and a rotation plan, so a certificate change can't lock every user out.
 
 ### Keys, files and backups
 - [ ] 🔴 IOS-004 **Secrets live in the Keychain with the right accessibility:** a `...ThisDeviceOnly` or `AfterFirstUnlock` class suited to the use, never the deprecated `kSecAttrAccessibleAlways`; no tokens or keys in `UserDefaults`, plists or files in the app container.
@@ -1799,7 +1802,12 @@ Read this at Step 5, before writing the report. The exact layouts are in the **r
 
 ### First: ask the questions (before writing anything)
 
-When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`. Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md): 4 per round, the most serious checks first, *Skip the rest* always allowed. Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
+When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`, then **ask only the ones that matter**:
+- **Ask:** questions on 🔴 and 🟡 checks, and questions whose answer changes which modules apply (children, payments, health data, EU users…). Most serious first, **at most 15 in all**, 4 per round, *Skip the rest* always allowed.
+- **Don't ask, list:** 🟢 questions and anything past 15 go straight into the report under *❓ Questions for you*, where the user can answer later. `--verify-report` refuses a report that drops one.
+- **Never ask what the files can answer** (the email provider, the analytics tool, the region: read the code and config). Legal judgement calls go on the *Questions for a lawyer* list, and store-listing preparation becomes a checklist for the user, not questions.
+
+Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md). Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
 
 1. **Code before trust.** Look at the code the answer is about. If the code settles it, the code decides: PASS or FAIL with that evidence. When the code contradicts the answer, FAIL, and the finding says *"You said X; `file:line` shows Y"*. Only when the code can't decide does the answer settle it: `PASS` with `ANSWER: … · code: …` (shown as ✅ per your answer), `FAIL`, or a `CHECK:` row when the user should look.
 2. **Follow-up checks.** If an answer adds to the profile (students or children, payments, health or financial data, users posting or chatting, other languages, AI features, EU users…), write `ADDS: <module>` in `.vibe-check/answers.md`, tell the user what it adds (*"Students use it: that adds 38 checks for student data, about 10 minutes"*) and check that module before the report. Any new `ASK:` items it raises are asked in one more round.
@@ -1807,7 +1815,7 @@ When every module is checked, collect the `CAN'T TELL` rows that start with `ASK
 
 **Before the questions, shrink the check-yourself list.** Every `CHECK:` row must survive the order in the **ledger** section (code, then the database read-only, then a question). If any are about the database and you have no access yet, the database question goes in the first round. After the questions, offer the grouped list from `coverage.py --check-list` as one choice: *Go through them now, one place at a time (Recommended)* · *Put them in the report*. Going through them, for each place say what to open and what to look for; the user answers for the whole group, ticks items, or pastes a screenshot, and each item becomes PASS or FAIL.
 
- `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
+ `--verify-report` refuses a report while a 🔴/🟡 `ASK:` item was neither asked nor skipped (until 15 have been asked), or any open question is missing from *❓ Questions for you*. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
 
 **Without a question tool**, ask the same questions as a numbered list the user can answer in one line:
   ```text
@@ -2110,7 +2118,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.9.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.9.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -2125,7 +2133,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.9.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.9.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2267,6 +2275,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] The work was split by app size as `codemap.py` planned; each helper ran `coverage.py --part` on its rows; at most 15 questions were asked and every other open question is under *❓ Questions for you*.
 - [ ] Mobile apps: every inventory item (components, permissions, deep links, WebViews, bridges, Firebase paths) has a verdict, and `appscan.py` ran on a built app only after the user said yes.
 - [ ] Build, lint, type-check and tests ran only after `BUILDS: yes`; fixes went where the user chose (separate copy, branch or patch files), and `.vibe-check/fix-log.md` says which.
 - [ ] `codemap.py`, `autocheck.py` and `coverage.py --carry` ran before the modules (unless the user asked for a full re-run), helpers did only their IDs from `.vibe-check/redo.md`, and the report has the *Checks redone · carried over · settled by script* line.

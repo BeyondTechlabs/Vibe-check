@@ -1,8 +1,8 @@
-# vibe-check lite v3.9.0
+# vibe-check lite v3.9.1
 
 The short version of vibe-check for chat-based builders with a paste limit (Bolt, v0, ChatGPT, Gemini). It has the AI blind spots and every 🔴 launch blocker. For the full audit (650+ checks, helper scripts, hunt mode, live tests), install the skill: `npx skills add BeyondTechlabs/Vibe-check`.
 
-**First line of your reply:** `Running vibe-check lite v3.9.0 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
+**First line of your reply:** `Running vibe-check lite v3.9.1 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
 
 ## Rules
 1. **Audit first. Don't change code** until the user approves fixes.
@@ -357,7 +357,7 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 - 🔴 AND-005 **FileProvider paths are narrow**: `res/xml/*paths*.xml` shares specific folders, never the root (`path="."` or `/`), the whole app data folder, or external storage.
 - 🔴 AND-008 **No intent redirection**: the app never launches an intent taken from another app's extras (`getParcelableExtra("intent")` then `startActivity`) without checking what it targets.
 - 🔴 AND-010 **The network security config is safe in release**: no cleartext except named domains with a reason, user-installed certificate authorities aren't trusted outside `<debug-overrides>`, and no `<trust-anchors>` that accept any certificate.
-- 🔴 AND-011 **TLS checking is never switched off**: no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
+- 🔴 AND-011 **Android TLS checking is never switched off**: no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
 - 🔴 AND-013 **WebViews are configured for what they load**: JavaScript only when needed; `addJavascriptInterface` only for your own bundled content, never remote pages; `setAllowFileAccess(false)`, `setAllowFileAccessFromFileURLs(false)` and `setAllowUniversalAccessFromFileURLs(f
 - 🔴 AND-014 **Sign-in never happens in a WebView**: OAuth and other sign-in flows use Custom Tabs or the system browser with PKCE, and auth codes return through verified App Links, not a custom scheme another app could also register.
 - 🔴 AND-016 **Restricted permissions are justified**: `QUERY_ALL_PACKAGES`, `MANAGE_EXTERNAL_STORAGE`, SMS and call log, `ACCESS_BACKGROUND_LOCATION`, accessibility services and exact alarms are only declared when the app's core feature needs them and Play's policy allows i
@@ -368,7 +368,7 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 ## iOS apps
 
 - 🔴 IOS-001 **App Transport Security exceptions are narrow**: only per-domain exceptions under `NSExceptionDomains`, each with a reason; no `NSAllowsArbitraryLoadsInWebContent` or `NSAllowsArbitraryLoadsForMedia` unless a feature needs it; the minimum TLS version isn't lowered.
-- 🔴 IOS-002 **TLS checking is never switched off**: no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
+- 🔴 IOS-002 **iOS TLS checking is never switched off**: no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
 - 🔴 IOS-004 **Secrets live in the Keychain with the right accessibility**: a `...ThisDeviceOnly` or `AfterFirstUnlock` class suited to the use, never the deprecated `kSecAttrAccessibleAlways`; no tokens or keys in `UserDefaults`, plists or files in the app container.
 - 🔴 IOS-008 **Sign-in never happens in an embedded web view**: OAuth and other sign-in flows use `ASWebAuthenticationSession` (or the system browser) with PKCE, never a `WKWebView` that could read the user's password.
 - 🔴 IOS-011 **WKWebView only**: no `UIWebView` anywhere, including inside third-party SDKs (Apple rejects apps that still contain it).

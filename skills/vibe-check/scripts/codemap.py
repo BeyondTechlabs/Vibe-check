@@ -107,6 +107,15 @@ def build(root: Path):
     return {"files": files, "modules": {m: dict(sorted(v.items(), key=lambda kv: -len(kv[1]))) for m, v in modules.items()}}
 
 
+def size_plan(n_files: int):
+    """How to split the work, by app size: helpers cost a fixed amount each, so small apps don't use them."""
+    if n_files <= 50:
+        return "small", "no helpers: one session reads the code once and does every module; small re-check sample"
+    if n_files <= 200:
+        return "medium", "2-3 helpers, each taking several modules"
+    return "large", "helpers per area (security; reliability and devops; QA, UX and maintainability; legal; platforms and supply chain; mobile)"
+
+
 def module_md(name, hits, files):
     out = [f"## {name}", ""]
     if not hits:
@@ -136,7 +145,8 @@ def main(argv):
     data = build(root)
     vc.mkdir(exist_ok=True)
     (vc / "codemap.json").write_text(json.dumps(data, ensure_ascii=False), "utf-8")
-    md = ["# vibe-check code map", "",
+    size, plan = size_plan(len(data["files"]))
+    md = ["# vibe-check code map", "", f"**App size: {size}** ({len(data['files'])} code files). **Plan:** {plan}.", "",
           f"{len(data['files'])} code files. Helpers: read only your module's part "
           "(`python3 <skill-folder>/scripts/codemap.py --module <name>`), then open only those lines.", "",
           "## Files", "", "| File | Lines | Defines |", "|---|---|---|"]
@@ -148,6 +158,7 @@ def main(argv):
     (vc / "codemap.md").write_text("\n".join(md), "utf-8")
     busy = sorted(((m, len(h)) for m, h in data["modules"].items()), key=lambda x: -x[1])
     print(f"codemap: {len(data['files'])} code files -> .vibe-check/codemap.md")
+    print(f"  app size: {size} -> {plan}")
     print("  files per module: " + " · ".join(f"{m} {n}" for m, n in busy))
     return 0
 

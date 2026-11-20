@@ -27,6 +27,8 @@ Usage:
     --remaining  list what is left to check (use it to resume a long run)
     --save       after a complete count, keep this run in .vibe-check/history/ so the next run can compare
     --check-list print the check-yourself items grouped by place (one visit per place), for the report
+    --brief MOD  print only the check lines a helper must do in module MOD (its IDs from redo.md), without the prose
+    --part FILE  check only the rows in FILE (a helper's ledger.d/<module>.md) before the helper finishes
     --carry      before the helpers start: carry over every check whose wording and cited files are unchanged since the
                  last saved run (ledger.d/00-carried.md), and list the rest in .vibe-check/redo.md
   Every count also writes .vibe-check/results.json (score, band, totals, areas, every check's status).
@@ -617,6 +619,33 @@ def write_carry(ledger_path: Path):
     return 0
 
 
+def print_brief(module: str, vc: Path) -> int:
+    """--brief <module>: just the check lines a helper must do (its IDs from redo.md, else the whole module), no prose."""
+    f = SKILL / "references" / f"{module}.md"
+    if not f.exists():
+        print(f"No module '{module}'."); return 2
+    text = f.read_text("utf-8")
+    todo = None
+    redo = vc / "redo.md"
+    if redo.exists():
+        m = re.search(r"^## " + re.escape(module) + r" \(\d+\)\n([^\n]*)", redo.read_text("utf-8"), re.M)
+        todo = set(re.findall(r"[A-Z0-9]+-\d{3}", m.group(1))) if m else set()
+    lines = re.findall(r"^- \[ \] ((?:🔴|🟡|🟢) ([A-Z0-9]+-\d{3}) .*)$", text, re.M)
+    keep = [full for full, cid in lines if todo is None or cid in todo]
+    head = text.split("\n## ", 1)[0].strip()
+    where = re.search(r"^Where to look:.*$", text, re.M)
+    print(f"# {module}: {len(keep)} check(s) to do" + (" (from redo.md)" if todo is not None else ""))
+    if where:
+        print("\n" + where.group(0))
+    print()
+    for line in keep:
+        print("- " + line)
+    if not keep:
+        print("Nothing to do in this module: every check was carried over or settled by script.")
+    del head
+    return 0
+
+
 def savings_line(t):
     redone = t["checked"] - t.get("carried", 0) - t.get("by_script", 0)
     return f"Checks redone: {redone} · carried over: {t.get('carried', 0)} · settled by script: {t.get('by_script', 0)}"
@@ -735,12 +764,23 @@ def check_evidence(key: str, ev: str, root: Path):
     return problems
 
 
-def sample_ids(results, checks, seed: str):
-    """Deterministic re-check sample: every 🔴 FAIL (up to 13) plus 12 PASS rows, picked by a hash of the ledger date."""
+def app_size(vc: Path):
+    """small / medium / large, from the number of code files in the code map (None if there's no map)."""
+    try:
+        n = len(json.loads((vc / "codemap.json").read_text("utf-8")).get("files", {}))
+    except (OSError, ValueError):
+        return None, 0
+    return ("small" if n <= 50 else "medium" if n <= 200 else "large"), n
+
+
+def sample_ids(results, checks, seed: str, size=None):
+    """Deterministic re-check sample: every 🔴 FAIL (up to 25), plus PASS rows (5 on a small app, 12 otherwise),
+    picked by a hash of the ledger date. Carried and script-settled rows are proved by the scripts, so they're left out."""
     import hashlib
     h = lambda c: hashlib.sha256((seed + c).encode()).hexdigest()
-    fails = sorted([c for c, r in results.items() if r[0] == "FAIL" and checks.get(c, ("", ""))[1] == "🔴"], key=h)[:13]
-    passes = sorted([c for c, r in results.items() if r[0] == "PASS"], key=h)[:12]
+    by_model = lambda r: not re.match(r"^\s*(AUTO|CARRIED)\b", r[1])
+    fails = sorted([c for c, r in results.items() if r[0] == "FAIL" and checks.get(c, ("", ""))[1] == "🔴" and by_model(r)], key=h)[:25]
+    passes = sorted([c for c, r in results.items() if r[0] == "PASS" and by_model(r)], key=h)[:5 if size == "small" else 12]
     return fails + passes
 
 
@@ -806,6 +846,13 @@ def main() -> int:
     want_fix_plan = "--fix-plan" in argv
     want_save = "--save" in argv
     want_check_list = "--check-list" in argv
+    part_file = None
+    if "--part" in argv:
+        i = argv.index("--part"); part_file = Path(argv[i + 1]); del argv[i:i + 2]
+    if "--brief" in argv:
+        i = argv.index("--brief"); mod = argv[i + 1]; del argv[i:i + 2]
+        rest = [a for a in argv if not a.startswith("--")]
+        return print_brief(mod, Path(rest[0] if rest else ".vibe-check/ledger.md").parent)
     report_path = None
     if "--verify-report" in argv:
         i = argv.index("--verify-report"); report_path = Path(argv[i + 1]); del argv[i:i + 2]
@@ -824,9 +871,9 @@ def main() -> int:
     seed_m = re.search(r"^\s*Date:\s*(.+)$", text, re.M)
     seed = seed_m.group(1).strip() if seed_m else root.name
     if level is None:
-        m = re.search(r"^\s*Level:\s*\**\s*(quick|full|launch|enterprise)", text, re.I | re.M)
+        m = re.search(r"^\s*Level:\s*\**\s*(quick|full|launch|enterprise|re-?check)", text, re.I | re.M)
         level = (m.group(1).lower() if m else "full")
-    level = "full" if level == "launch" else level
+    level = "full" if level in ("launch", "recheck", "re-check") else level   # a re-check is a Full count with carried rows
 
     order, checks, prefixes = load_checklist()
     errors, warns = [], []
@@ -950,7 +997,7 @@ def main() -> int:
     if len(evidence_problems) > 40:
         errors.append(f"…and {len(evidence_problems) - 40} more evidence problems")
 
-    sample = sample_ids(results, checks, seed) if level in ("full", "enterprise") else []
+    sample = sample_ids(results, checks, seed, app_size(ledger_path.parent)[0]) if level in ("full", "enterprise") else []
     if want_sample:
         print("Independent re-check sample (have a fresh helper, or a fresh pass that re-reads the files, check each one):")
         for c in sample:
@@ -1304,10 +1351,19 @@ def main() -> int:
             write_appendix(report_path, build_appendix(required, results, checks))
             rep_text = report_path.read_text("utf-8")
             # questions: every ❓ the user can answer was asked (or they chose to skip), before the report
+            # v3.9.1: ask only what matters: the 🔴/🟡 questions first (up to 15); everything else is listed in the report
             unasked = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask" and c not in ans_text]
-            if unasked:
-                errors.append(f"REPORT: {len(unasked)} question(s) weren't asked ({', '.join(unasked[:6])}…): ask them as choices before the "
-                              "report and record each answer, or that the user skipped it, in .vibe-check/answers.md")
+            asked_n = sum(1 for line in ans_text.splitlines() if re.match(r"^\|\s*(?:BS-\d{2}|[A-Z0-9]+-\d{3})\s*\|", line))
+            skipped_all = bool(re.search(r"skip(?:ped)? the rest|skipped: unattended", ans_text, re.I))
+            important = [c for c in unasked if checks[c][1] in ("🔴", "🟡")]
+            if important and not skipped_all and asked_n < 15:
+                errors.append(f"REPORT: {len(important)} 🔴/🟡 question(s) weren't asked ({', '.join(important[:6])}…): ask the most serious "
+                              f"first, as choices, up to 15 in all ({asked_n} so far), and record each answer or skip in .vibe-check/answers.md")
+            qsec = re.search(r"^##[^\n]*Questions for you[^\n]*\n(.*?)(?=^## |\Z)", rep_text, re.M | re.S)
+            not_listed = [c for c in unasked if not qsec or c not in qsec.group(1)]
+            if not_listed:
+                errors.append(f"REPORT: {len(not_listed)} open question(s) aren't listed under '❓ Questions for you' "
+                              f"({', '.join(not_listed[:6])}…): every question not asked goes there, so none is lost")
             # v3.7: the report says how much was redone, carried over and settled by script
             if savings_line(T) not in rep_text:
                 errors.append(f"REPORT: add this line under the Checks table, exactly as coverage.py prints it: '{savings_line(T)}'")
@@ -1352,6 +1408,19 @@ def main() -> int:
             if not errors:
                 print(f"\nREPORT VERIFIED: {report_path} matches the ledger ({seen_rows} coverage rows and the score card).")
 
+    if part_file is not None:
+        # v3.9.1: a helper checks only its own rows before finishing, so no separate tidy-up pass is needed
+        try:
+            part_text = part_file.read_text("utf-8")
+        except OSError:
+            print(f"No file at {part_file}"); return 2
+        part_ids = set(re.findall(r"^\|\s*`?((?:BS-\d{2}|[A-Z0-9]+-\d{3}|[A-Z]+-[\w*-]+))`?\s*\|", part_text, re.M))
+        mine = [e for e in errors if e.split(":", 1)[0].strip() in part_ids]
+        for e in mine:
+            print("GAP:", e)
+        print(f"\nPART OK: {part_file.name} ({len(part_ids)} rows) has no problems." if not mine
+              else f"\nPART: {len(mine)} problem(s) in {part_file.name}. Fix them before you finish.")
+        return 0 if not mine else 1
     for w in warns:
         print("warning:", w)
     if missing:

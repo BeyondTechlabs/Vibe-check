@@ -4,7 +4,12 @@ Read this at Step 5, before writing the report. The exact layouts are in `report
 
 ## First: ask the questions (before writing anything)
 
-When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`. Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md): 4 per round, the most serious checks first, *Skip the rest* always allowed. Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
+When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`, then **ask only the ones that matter**:
+- **Ask:** questions on 🔴 and 🟡 checks, and questions whose answer changes which modules apply (children, payments, health data, EU users…). Most serious first, **at most 15 in all**, 4 per round, *Skip the rest* always allowed.
+- **Don't ask, list:** 🟢 questions and anything past 15 go straight into the report under *❓ Questions for you*, where the user can answer later. `--verify-report` refuses a report that drops one.
+- **Never ask what the files can answer** (the email provider, the analytics tool, the region: read the code and config). Legal judgement calls go on the *Questions for a lawyer* list, and store-listing preparation becomes a checklist for the user, not questions.
+
+Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md). Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
 
 1. **Code before trust.** Look at the code the answer is about. If the code settles it, the code decides: PASS or FAIL with that evidence. When the code contradicts the answer, FAIL, and the finding says *"You said X; `file:line` shows Y"*. Only when the code can't decide does the answer settle it: `PASS` with `ANSWER: … · code: …` (shown as ✅ per your answer), `FAIL`, or a `CHECK:` row when the user should look.
 2. **Follow-up checks.** If an answer adds to the profile (students or children, payments, health or financial data, users posting or chatting, other languages, AI features, EU users…), write `ADDS: <module>` in `.vibe-check/answers.md`, tell the user what it adds (*"Students use it: that adds 38 checks for student data, about 10 minutes"*) and check that module before the report. Any new `ASK:` items it raises are asked in one more round.
@@ -12,7 +17,7 @@ When every module is checked, collect the `CAN'T TELL` rows that start with `ASK
 
 **Before the questions, shrink the check-yourself list.** Every `CHECK:` row must survive the order in `ledger.md` (code, then the database read-only, then a question). If any are about the database and you have no access yet, the database question goes in the first round. After the questions, offer the grouped list from `coverage.py --check-list` as one choice: *Go through them now, one place at a time (Recommended)* · *Put them in the report*. Going through them, for each place say what to open and what to look for; the user answers for the whole group, ticks items, or pastes a screenshot, and each item becomes PASS or FAIL.
 
- `--verify-report` refuses a report while an `ASK:` item was neither asked nor skipped. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
+ `--verify-report` refuses a report while a 🔴/🟡 `ASK:` item was neither asked nor skipped (until 15 have been asked), or any open question is missing from *❓ Questions for you*. In unattended runs, record `skipped: unattended`. Only then write the report, so the score reflects the answers.
 
 **Without a question tool**, ask the same questions as a numbered list the user can answer in one line:
   ```text

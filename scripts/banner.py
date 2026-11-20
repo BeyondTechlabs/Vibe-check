@@ -27,9 +27,9 @@ dots_off = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{R*0.62:.1f}"/>' for _
 dots_on = "".join(f'<circle class="d c{col}" cx="{x:.1f}" cy="{y:.1f}" r="{R}"/>' for col, x, y in on)
 dots_glow = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{R}"/>' for _, x, y in on)
 delays = "".join(f".c{c}{{animation-delay:{0.15 + c*0.022:.3f}s}}" for c in range(cols))
-sub = "PRE-LAUNCH AUDIT FOR AI-BUILT APPS"
-svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-label="vibe-check: pre-launch audit for AI-built apps">
-<title>vibe-check: pre-launch audit for AI-built apps</title>
+sub = "FIND WHAT BREAKS BEFORE YOUR USERS DO"
+svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-label="vibe-check: find what breaks before your users do. Security, privacy and launch audit for web and mobile apps">
+<title>vibe-check: security, privacy and launch audit for web and mobile apps</title>
 <defs>
 <linearGradient id="sweep" gradientUnits="userSpaceOnUse" x1="-260" y1="0" x2="0" y2="0">
 <stop offset="0" stop-color="#22c55e" stop-opacity="0"/><stop offset="0.7" stop-color="#4ade80" stop-opacity="1"/><stop offset="0.85" stop-color="#dcfce7" stop-opacity="1"/><stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
@@ -60,10 +60,10 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{
 <g class="on">{dots_on}</g>
 <g class="sw" filter="url(#glow)">{dots_glow}</g>
 <g clip-path="url(#type)"><text class="sub" x="{W/2}" y="172" text-anchor="middle">{sub}</text></g>
-<rect class="cur" x="{W/2 + 262}" y="158" width="9" height="17"/>
+<rect class="cur" x="{W/2 + 286}" y="158" width="9" height="17"/>
 <g class="fade">
-<circle class="live" cx="{W/2 - 232}" cy="226" r="4.5"/>
-<text class="tag" x="{W/2 - 220}" y="230">SECURITY · PRIVACY · LEGAL · RELIABILITY · LAUNCH</text>
+<circle class="live" cx="{W/2 - 292}" cy="226" r="4.5"/>
+<text class="tag" x="{W/2 + 8}" y="230" text-anchor="middle">SECURITY, PRIVACY AND LAUNCH AUDIT FOR WEB AND MOBILE APPS</text>
 </g>
 </svg>'''
 (Path(__file__).resolve().parent.parent / "assets" / "banner.svg").write_text(svg)
