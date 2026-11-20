@@ -671,6 +671,44 @@ def main() -> int:
         r = run("coverage.py", str(ledger(out, [x for x in full if not x.startswith("| OPS-001 |")] + ["| OPS-001 | FAIL 🔬 Confirmed | AUTO: no CI anywhere, trust me |"] + inv_rows + hit_rows)))
         check(r.returncode == 1 and "AUTO" in r.stdout and "autocheck.py" in r.stdout, f"autocheck: a hand-typed AUTO row must be rejected:\n{r.stdout[-300:]}")
 
+        # v3.8: build, lint and tests run only after the user said yes
+        tools = "\n\n## Tools run\n\n| Tool | Command | Result |\n|---|---|---|\n| tests | `npm test` | 12 passed |\n"
+        lp = ledger(out, full + inv_rows + hit_rows)
+        lp.write_text(lp.read_text() + tools)
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+        r = run("coverage.py", str(lp))
+        check(r.returncode == 1 and "without asking" in r.stdout, "builds: tests run without asking should be rejected")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nBUILDS: no\n")
+        r = run("coverage.py", str(lp))
+        check(r.returncode == 1 and "said no builds" in r.stdout, "builds: tests run after 'BUILDS: no' should be rejected")
+        lp.write_text(lp.read_text().replace("| 12 passed |", "| not run: you said no builds |"))
+        r = run("coverage.py", str(lp))
+        check(r.returncode == 0, f"builds: tools marked 'not run' are fine with 'BUILDS: no':\n{r.stdout[-300:]}")
+        lp.write_text(lp.read_text().replace("| not run: you said no builds |", "| 12 passed |"))
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nBUILDS: yes\n")
+        r = run("coverage.py", str(lp))
+        check(r.returncode == 0, "builds: with 'BUILDS: yes' the tests may run")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+
+        # v3.8: mobile parts are detected separately (an Android Flutter app with Firebase, no iOS)
+        with tempfile.TemporaryDirectory() as tmpm:
+            pm = Path(tmpm) / "m"; (pm / "android/app/src/main").mkdir(parents=True); (pm / "lib").mkdir()
+            (pm / "pubspec.yaml").write_text("name: x\ndependencies:\n  flutter:\n    sdk: flutter\n  firebase_core: ^3.0.0\n")
+            (pm / "android/app/src/main/AndroidManifest.xml").write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>\n')
+            (pm / "firestore.rules").write_text('rules_version = "2";\n')
+            (pm / "lib/main.dart").write_text("void main() {}\n")
+            run("profile.py", str(pm))
+            mods = set(json.loads((pm / ".vibe-check/profile.json").read_text())["modules_with_evidence"])
+            check({"android", "mobile-frameworks", "firebase", "mobile-data", "mobile"} <= mods and "ios" not in mods,
+                  f"mobile: an Android Flutter app with Firebase should load those parts and not iOS: {sorted(mods)}")
+            (pm / "ios/Runner.xcodeproj").mkdir(parents=True); (pm / "ios/Runner/").mkdir(parents=True)
+            (pm / "ios/Runner/Info.plist").write_text("<plist><dict><key>CFBundleIdentifier</key></dict></plist>\n")
+            run("profile.py", str(pm))
+            mods = set(json.loads((pm / ".vibe-check/profile.json").read_text())["modules_with_evidence"])
+            check("ios" in mods, f"mobile: adding an iOS project should load ios.md: {sorted(mods)}")
+            r = run("codemap.py", str(pm), "--module", "android")
+            check(r.returncode == 0 and "AndroidManifest.xml" in r.stdout, f"mobile: the code map should have an android part:\n{r.stdout[:300]}")
+
         # v3.7 code map: every module part, and a helper can print just its own
         r = run("codemap.py", str(app))
         check(r.returncode == 0 and (out / "codemap.md").exists() and "## security" in (out / "codemap.md").read_text(), f"codemap: should write codemap.md:\n{r.stdout}{r.stderr}")

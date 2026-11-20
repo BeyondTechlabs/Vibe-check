@@ -1,8 +1,8 @@
-# vibe-check lite v3.7.0
+# vibe-check lite v3.8.0
 
 The short version of vibe-check for chat-based builders with a paste limit (Bolt, v0, ChatGPT, Gemini). It has the AI blind spots and every 🔴 launch blocker. For the full audit (650+ checks, helper scripts, hunt mode, live tests), install the skill: `npx skills add BeyondTechlabs/Vibe-check`.
 
-**First line of your reply:** `Running vibe-check lite v3.7.0 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
+**First line of your reply:** `Running vibe-check lite v3.8.0 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
 
 ## Rules
 1. **Audit first. Don't change code** until the user approves fixes.
@@ -342,10 +342,60 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 - 🔴 MOB-004 **Apple privacy manifest**: (`PrivacyInfo.xcprivacy`) for the app, declaring required-reason APIs and tracking domains, and third-party SDKs that ship their own manifests are up to date.
 - 🔴 MOB-005 **Digital goods use in-app purchase**: where the store rules require it, and receipts or purchase tokens are **verified on the server**, never trusted from the device.
 - 🔴 MOB-006 **Tracking permission**: if the app tracks users across other companies' apps or websites (ad SDKs, cross-app attribution), it asks with App Tracking Transparency on iOS before tracking.
+- 🔴 MOB-025 **Apps for children follow the stores' family rules**: if children are in the audience, the app meets Google Play's Families policy and Apple's Kids Category rules (approved ad and analytics SDKs only, no tracking, parental gates on links and purchases).
 - 🔴 MOB-011 **No secrets in the app bundle**: API secret keys, service-role keys and private tokens aren't in the JS bundle, `.env` files compiled into the app, `Info.plist`, `strings.xml` or `google-services.json` beyond the public config.
 - 🔴 MOB-012 **Tokens stored securely**: session and refresh tokens live in Keychain/Keystore (e.g.
 - 🔴 MOB-013 **HTTPS only**: no `NSAllowsArbitraryLoads` / `usesCleartextTraffic="true"` in production builds, except narrowly for documented local development.
 - 🔴 MOB-018 **Crash and error reporting**: (Sentry, Crashlytics or similar) in release builds, with personal data scrubbed.
+
+## Android apps
+
+- 🔴 AND-001 **Backups don't carry secrets or personal data**: `android:allowBackup` is `false`, or `android:dataExtractionRules` (Android 12+) and `android:fullBackupContent` exclude tokens, databases and files with personal data.
+- 🔴 AND-002 **The release build is a release build**: not `debuggable`, not `testOnly`, signed with the release (upload) key, built from the release build type.
+- 🔴 AND-003 **Every activity, service, receiver and provider declares `android:exported` explicitly**: , and each exported one is either meant to be public (the launcher activity, a verified app link) or protected by a permission with `protectionLevel="signature"`.
+- 🔴 AND-004 **Content providers are locked down**: not exported unless needed; `grantUriPermissions` limited to the paths that need it; read and write permissions set; queries built with selection arguments, never by joining strings (SQL injection through `query()`).
+- 🔴 AND-005 **FileProvider paths are narrow**: `res/xml/*paths*.xml` shares specific folders, never the root (`path="."` or `/`), the whole app data folder, or external storage.
+- 🔴 AND-008 **No intent redirection**: the app never launches an intent taken from another app's extras (`getParcelableExtra("intent")` then `startActivity`) without checking what it targets.
+- 🔴 AND-010 **The network security config is safe in release**: no cleartext except named domains with a reason, user-installed certificate authorities aren't trusted outside `<debug-overrides>`, and no `<trust-anchors>` that accept any certificate.
+- 🔴 AND-011 **TLS checking is never switched off**: no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
+- 🔴 AND-013 **WebViews are configured for what they load**: JavaScript only when needed; `addJavascriptInterface` only for your own bundled content, never remote pages; `setAllowFileAccess(false)`, `setAllowFileAccessFromFileURLs(false)` and `setAllowUniversalAccessFromFileURLs(f
+- 🔴 AND-014 **Sign-in never happens in a WebView**: OAuth and other sign-in flows use Custom Tabs or the system browser with PKCE, and auth codes return through verified App Links, not a custom scheme another app could also register.
+- 🔴 AND-016 **Restricted permissions are justified**: `QUERY_ALL_PACKAGES`, `MANAGE_EXTERNAL_STORAGE`, SMS and call log, `ACCESS_BACKGROUND_LOCATION`, accessibility services and exact alarms are only declared when the app's core feature needs them and Play's policy allows i
+- 🔴 AND-020 **Secrets and keys live in the Android Keystore**: encryption keys are generated in the Keystore (hardware-backed where available), never hard-coded or stored next to the data they protect; tokens aren't in plain `SharedPreferences`.
+- 🔴 AND-021 **No world-readable files or shared storage for private data**: no `MODE_WORLD_READABLE`/`WRITEABLE`; personal data stays in app-private storage, not `Download/`, `DCIM/` or other shared folders.
+- 🔴 AND-024 **Signing keys and passwords are not in the repo**: no `.jks`/`.keystore` files committed, no store or key passwords in `build.gradle` or `gradle.properties`; the upload key is separate from the app signing key (Play App Signing).
+
+## iOS apps
+
+- 🔴 IOS-001 **App Transport Security exceptions are narrow**: only per-domain exceptions under `NSExceptionDomains`, each with a reason; no `NSAllowsArbitraryLoadsInWebContent` or `NSAllowsArbitraryLoadsForMedia` unless a feature needs it; the minimum TLS version isn't lowered.
+- 🔴 IOS-002 **TLS checking is never switched off**: no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
+- 🔴 IOS-004 **Secrets live in the Keychain with the right accessibility**: a `...ThisDeviceOnly` or `AfterFirstUnlock` class suited to the use, never the deprecated `kSecAttrAccessibleAlways`; no tokens or keys in `UserDefaults`, plists or files in the app container.
+- 🔴 IOS-008 **Sign-in never happens in an embedded web view**: OAuth and other sign-in flows use `ASWebAuthenticationSession` (or the system browser) with PKCE, never a `WKWebView` that could read the user's password.
+- 🔴 IOS-011 **WKWebView only**: no `UIWebView` anywhere, including inside third-party SDKs (Apple rejects apps that still contain it).
+
+## React Native, Expo, Flutter, Capacitor and Ionic
+
+- 🔴 MFW-001 **Over-the-air updates are signed and controlled**: EAS Update code signing (or the equivalent for CodePush, Capgo, Shorebird) is on, only CI or named people can publish to the production channel, and the app rejects unsigned bundles.
+- 🔴 MFW-003 **Release builds run the bundled release code**: no development server URL (Metro, Expo dev client, Capacitor `server.url`) in production builds, `__DEV__`-only code really is unreachable in release, and Flutter release builds use `--release`.
+- 🔴 MFW-007 **Native bridges check what they're given**: React Native native modules, Flutter platform channels and Capacitor/Cordova plugins validate every argument from the JavaScript/Dart side, and none offers a generic "run this", "open any file" or "call any URL" method.
+- 🔴 MFW-008 **Capacitor, Ionic and Cordova apps serve the app from the bundle**: no remote `server.url` in production, `allowNavigation` lists only your own domains, and the Content Security Policy blocks injected scripts from reaching native plugins.
+- 🔴 MFW-010 **Screens reached by a deep link enforce sign-in and permissions**: (Expo Router, React Navigation linking, `go_router`): a link can't open an account, admin or payment screen without the same checks as normal navigation.
+
+## Firebase and mobile backends
+
+- 🔴 FBS-001 **Rules deny by default**: every collection and storage path is matched explicitly; there's no broad recursive wildcard (`match /{document=**}`) that allows reads or writes, and anything not matched is refused.
+- 🔴 FBS-002 **Writes are validated field by field**: rules limit which keys a client may write (`request.resource.data.keys().hasOnly([...])`), check types and sizes, and keep fixed fields (owner ID, creation time, price, balance) from being changed by the client.
+- 🔴 FBS-003 **Admin and role checks come from custom claims set on the server**: (`request.auth.token.admin`), never from a field in a document the user can write.
+- 🔴 FBS-004 **Storage rules tie paths to the signed-in user**: (`/users/{uid}/...` matching `request.auth.uid`), limit file size and content type, and allow no public writes.
+- 🔴 FBS-008 **App Check is enforced, not just monitored,**: for Firestore, Storage and callable functions (`enforceAppCheck: true`), once the app's own traffic passes it.
+- 🔴 FBS-009 **Every callable and HTTP function checks who's calling**: callable functions use `request.auth` and refuse when it's missing; HTTP functions verify the Firebase ID token; functions acting for a user re-check that the user may do it, because the Admin SDK skips the rules.
+- 🔴 FBS-012 **Production has its own Firebase project**: debug and test builds point to a separate project, so testing never touches real users' data.
+
+## Data on the device
+
+- 🔴 MDV-001 **Local databases with personal, health or money data are encrypted**: (SQLCipher, encrypted Realm or MMKV, or the platform's file protection with keys in the Keychain/Keystore), or that data isn't kept on the device at all.
+- 🔴 MDV-003 **Sign-out and account deletion wipe the device**: tokens, Keychain/Keystore items, local databases, caches and downloaded files are removed, so the next person to use the phone sees nothing.
+- 🔴 MDV-007 **Logs and crash reports carry no tokens or personal data**: no `print`, `console.log`, `Log.d`, `NSLog` or `os_log` of tokens, passwords, emails, health or money details in release builds; crash reporter keys and breadcrumbs are scrubbed.
 
 ## Community, chat and marketplaces
 

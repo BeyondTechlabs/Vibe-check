@@ -51,7 +51,9 @@ Date: YYYY-MM-DD
 
 ## Tools and fallbacks
 
-**Always try the project's own tools** and record each in the ledger's *Tools run* table: the package audit (`npm audit` / `pnpm audit` / `pip-audit`), type-check (`tsc --noEmit` or the framework's check), lint, the test suite, and the build. Then use what's available: gitleaks or trufflehog, `npx license-checker`, Lighthouse, axe, Playwright, and `curl -I` against live URLs. **If a tool is missing or blocked, don't skip the check:** use the fallback, and say which method you used.
+**Ask once before running the project's build, lint, type-check or tests** (they take time, write build output, and some teams don't let agents run them): *"May I run your build, lint and tests? It adds about N minutes"* · *Yes (Recommended)* · *No, read the code only*. Write `BUILDS: yes` or `BUILDS: no` in `.vibe-check/answers.md` and reuse it on later runs. `coverage.py` refuses a ledger whose *Tools run* table shows a build, lint, type-check or test command without `BUILDS: yes`. With `BUILDS: no`, list those tools as `not run: you said no builds`, and checks that need them read the CI's latest run or config instead, or become `CHECK: your CI → latest run → …`.
+
+**Then try the project's own tools** and record each in the ledger's *Tools run* table: the package audit (`npm audit` / `pnpm audit` / `pip-audit`, read-only, no question needed) and, with `BUILDS: yes`, type-check (`tsc --noEmit` or the framework's check), lint, the test suite, and the build. Then use what's available: gitleaks or trufflehog, `npx license-checker`, Lighthouse, axe, Playwright, and `curl -I` against live URLs. **If a tool is missing or blocked, don't skip the check:** use the fallback, and say which method you used.
 
 | Check | Fallback |
 |---|---|

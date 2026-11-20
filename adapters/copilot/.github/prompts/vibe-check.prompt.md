@@ -71,7 +71,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 3. **Never guess a PASS.** If you can't confirm something, mark it **CAN'T TELL** and turn it into a question for the user.
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
-6. **Use only safe actions.** Don't run destructive commands or touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app (live tests: say the extra time) or opening any copy of production data, and **never test real users' passwords**, even offline (the **live-tests** section below). Anything that writes data (signups, form submits, profile edits) runs only on dev or staging, using test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with the user's approval and paid APIs mocked.
+6. **Use only safe actions.** No destructive commands; don't touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time it adds) or opening copies of production data, and **never test real users' passwords**, even offline (the **live-tests** section below). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
@@ -200,9 +200,10 @@ Then write down:
 | Payments, wallets, lending, investing, payouts | the **fintech** section below |
 | Full and Enterprise: policies the app must publish | the **policies** section below |
 | Enterprise level, B2B or government buyers | the **enterprise** section below |
-| A mobile app (iOS, Android, Expo, Capacitor, Flutter, React Native) | the **mobile** section below |
-| Users post, chat, follow, review, or buy and sell from each other | the **community** section below |
-| Runs on AWS, Google Cloud, Azure or similar, or uses Kubernetes, Terraform or Docker in production | the **cloud-infra** section below |
+| A mobile app (last three: only the parts it uses) | the **mobile** section below, the **mobile-data** section below, the **android** section below, the **ios** section below, the **mobile-frameworks** section below |
+| Firebase | the **firebase** section below |
+| Users post, chat, follow, review or trade with each other | the **community** section below |
+| AWS, Google Cloud, Azure, Kubernetes, Terraform or Docker in production | the **cloud-infra** section below |
 | A desktop app (Electron, Tauri) or a browser extension | the **desktop-extensions** section below |
 | Several languages or countries, or non-English users | `references/i18n.md` |
 | Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (two-account, role, logged-out, rate limits, errors, uploads, ZAP baseline, nuclei) | the **live-tests** section below |
@@ -344,7 +345,9 @@ Date: YYYY-MM-DD
 
 ### Tools and fallbacks
 
-**Always try the project's own tools** and record each in the ledger's *Tools run* table: the package audit (`npm audit` / `pnpm audit` / `pip-audit`), type-check (`tsc --noEmit` or the framework's check), lint, the test suite, and the build. Then use what's available: gitleaks or trufflehog, `npx license-checker`, Lighthouse, axe, Playwright, and `curl -I` against live URLs. **If a tool is missing or blocked, don't skip the check:** use the fallback, and say which method you used.
+**Ask once before running the project's build, lint, type-check or tests** (they take time, write build output, and some teams don't let agents run them): *"May I run your build, lint and tests? It adds about N minutes"* · *Yes (Recommended)* · *No, read the code only*. Write `BUILDS: yes` or `BUILDS: no` in `.vibe-check/answers.md` and reuse it on later runs. `coverage.py` refuses a ledger whose *Tools run* table shows a build, lint, type-check or test command without `BUILDS: yes`. With `BUILDS: no`, list those tools as `not run: you said no builds`, and checks that need them read the CI's latest run or config instead, or become `CHECK: your CI → latest run → …`.
+
+**Then try the project's own tools** and record each in the ledger's *Tools run* table: the package audit (`npm audit` / `pnpm audit` / `pip-audit`, read-only, no question needed) and, with `BUILDS: yes`, type-check (`tsc --noEmit` or the framework's check), lint, the test suite, and the build. Then use what's available: gitleaks or trufflehog, `npx license-checker`, Lighthouse, axe, Playwright, and `curl -I` against live URLs. **If a tool is missing or blocked, don't skip the check:** use the fallback, and say which method you used.
 
 | Check | Fallback |
 |---|---|
@@ -1417,6 +1420,8 @@ Load this file at the Enterprise level: when selling to companies or government,
 
 Load this file when the project contains a mobile app: native iOS or Android, React Native, Expo, Capacitor, Ionic, Flutter or a store-published PWA wrapper. App store rejections and mobile-only security problems are among the most common launch blockers. Check `Info.plist`, `PrivacyInfo.xcprivacy`, `AndroidManifest.xml`, `app.json`/`app.config.*`, `capacitor.config.*`, `build.gradle`, and the native project folders.
 
+**Also load, for each part the app has:** the **android** section (Android), the **ios** section (iOS), the **mobile-frameworks** section (React Native, Expo, Flutter, Capacitor, Ionic), the **firebase** section (Firebase backend) and always the **mobile-data** section (data left on the phone). Each part is a module of its own; ones the app doesn't use get one `N/A` row.
+
 ### App store requirements
 - [ ] 🔴 MOB-001 **Account deletion inside the app** if the app lets people create accounts (Apple and Google both require it). The flow deletes server data too, not just the local session.
 - [ ] 🔴 MOB-002 **Permission purpose strings for every permission the app can trigger:** `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSMicrophoneUsageDescription`, `NSLocationWhenInUseUsageDescription` and so on, in clear words. A missing string makes iOS **crash** the app when that feature is used (for example "Take Photo" in a file picker on iPad).
@@ -1428,6 +1433,9 @@ Load this file when the project contains a mobile app: native iOS or Android, Re
 - [ ] 🟡 MOB-008 **Target and minimum SDK versions** meet Google Play's current target API requirement and Apple's current SDK requirement.
 - [ ] 🟡 MOB-009 **Store listing is honest:** screenshots, description, age rating and content questionnaire match the app (e.g. user chat or AI features change the rating). A support URL and privacy policy URL work.
 - [ ] 🟡 MOB-010 **Review notes and a demo account** are prepared for app review if features need sign-in.
+- [ ] 🔴 MOB-025 **Apps for children follow the stores' family rules:** if children are in the audience, the app meets Google Play's Families policy and Apple's Kids Category rules (approved ad and analytics SDKs only, no tracking, parental gates on links and purchases). See the **kids-education** section for the laws.
+- [ ] 🟡 MOB-026 **Account deletion can also be requested on the web,** at a link given in the Google Play Data safety form, for people who've already uninstalled the app.
+- [ ] 🟡 MOB-027 **The release path meets the stores' testing rules:** a closed or TestFlight testing track has run, and new Google Play developer accounts meet Play's current closed-testing requirement before production. Look the requirement up.
 
 ### Mobile security
 - [ ] 🔴 MOB-011 **No secrets in the app bundle:** API secret keys, service-role keys and private tokens aren't in the JS bundle, `.env` files compiled into the app, `Info.plist`, `strings.xml` or `google-services.json` beyond the public config. Anything shipped in an app can be extracted.
@@ -1446,6 +1454,181 @@ Load this file when the project contains a mobile app: native iOS or Android, Re
 - [ ] 🟡 MOB-022 **Tested on real devices:** small and large phones, tablets (iPad split view and rotation), the oldest supported OS version, and dark mode.
 - [ ] 🟢 MOB-023 **App size and startup time** are reasonable, and large assets load on demand.
 - [ ] 🟢 MOB-024 **Push notifications** ask permission in context, can be turned off in settings, and don't show sensitive content on the lock screen.
+
+<a id="android"></a>
+
+## Android apps
+
+Load this file when the project builds an Android app: native Kotlin or Java, or the Android side of React Native, Expo, Flutter, Capacitor or Ionic (`android/`, `AndroidManifest.xml`, `build.gradle`, or `android` settings in `app.json` / `app.config.*`). Store-wide and cross-platform checks are in the **mobile** section; data kept on the device is in the **mobile-data** section.
+
+Where to look: `AndroidManifest.xml` (and the merged manifest if a build exists), `res/xml/` (network security config, backup rules, file paths), `build.gradle(.kts)` and `proguard-rules.pro`, and the Kotlin/Java sources the code map points to. For managed Expo apps, read the `android` block and config plugins in `app.json` / `app.config.*`. Google Play's current numbers (target API level, page-size rules, testing requirements) change every year: look them up during the run from Google's own pages and cite the URL; never state them from memory.
+
+Sources: OWASP MASVS and MASTG (Android tests), Android developer security guidance, Google Play Developer Policy Center.
+
+### Manifest and components
+- [ ] 🔴 AND-001 **Backups don't carry secrets or personal data.** `android:allowBackup` is `false`, or `android:dataExtractionRules` (Android 12+) and `android:fullBackupContent` exclude tokens, databases and files with personal data. A missing attribute means backups are **on**.
+- [ ] 🔴 AND-002 **The release build is a release build:** not `debuggable`, not `testOnly`, signed with the release (upload) key, built from the release build type. Check `build.gradle` build types and the manifest.
+- [ ] 🔴 AND-003 **Every activity, service, receiver and provider declares `android:exported` explicitly**, and each exported one is either meant to be public (the launcher activity, a verified app link) or protected by a permission with `protectionLevel="signature"`. Exported components that act on the user's data without a check are a 🔴.
+- [ ] 🔴 AND-004 **Content providers are locked down:** not exported unless needed; `grantUriPermissions` limited to the paths that need it; read and write permissions set; queries built with selection arguments, never by joining strings (SQL injection through `query()`).
+- [ ] 🔴 AND-005 **FileProvider paths are narrow:** `res/xml/*paths*.xml` shares specific folders, never the root (`path="."` or `/`), the whole app data folder, or external storage.
+- [ ] 🟡 AND-006 **PendingIntents are immutable and explicit:** `FLAG_IMMUTABLE` unless mutation is required, and the wrapped intent names its target component.
+- [ ] 🟡 AND-007 **Intents and broadcasts don't leak:** sensitive data goes only in explicit intents; broadcasts with personal data are sent with a permission or kept inside the app; dynamically registered receivers say whether they're exported (`RECEIVER_NOT_EXPORTED`).
+- [ ] 🔴 AND-008 **No intent redirection:** the app never launches an intent taken from another app's extras (`getParcelableExtra("intent")` then `startActivity`) without checking what it targets.
+- [ ] 🟢 AND-009 **Task hijacking is not possible:** no unusual `taskAffinity` or `launchMode` settings on sensitive activities that would let another app slip its screen in front of yours.
+
+### Network
+- [ ] 🔴 AND-010 **The network security config is safe in release:** no cleartext except named domains with a reason, user-installed certificate authorities aren't trusted outside `<debug-overrides>`, and no `<trust-anchors>` that accept any certificate.
+- [ ] 🔴 AND-011 **TLS checking is never switched off:** no custom `TrustManager` that accepts every certificate, no `HostnameVerifier` that returns `true`, no `onReceivedSslError` that calls `handler.proceed()`, no OkHttp client built to trust all.
+- [ ] 🟡 AND-012 **Certificate pinning where money or health data moves**, with backup pins and an expiry or rotation plan so a certificate change can't lock every user out.
+
+### WebViews and links
+- [ ] 🔴 AND-013 **WebViews are configured for what they load:** JavaScript only when needed; `addJavascriptInterface` only for your own bundled content, never remote pages; `setAllowFileAccess(false)`, `setAllowFileAccessFromFileURLs(false)` and `setAllowUniversalAccessFromFileURLs(false)` unless a feature needs them; URLs checked in `shouldOverrideUrlLoading`.
+- [ ] 🔴 AND-014 **Sign-in never happens in a WebView:** OAuth and other sign-in flows use Custom Tabs or the system browser with PKCE, and auth codes return through verified App Links, not a custom scheme another app could also register.
+- [ ] 🟡 AND-015 **App Links are verified:** intent filters for your domain use `android:autoVerify="true"`, and the matching `/.well-known/assetlinks.json` lists the release signing certificate fingerprint (including Play App Signing's).
+
+### Permissions and Play policy
+- [ ] 🔴 AND-016 **Restricted permissions are justified:** `QUERY_ALL_PACKAGES`, `MANAGE_EXTERNAL_STORAGE`, SMS and call log, `ACCESS_BACKGROUND_LOCATION`, accessibility services and exact alarms are only declared when the app's core feature needs them and Play's policy allows it (Play rejects or removes apps otherwise).
+- [ ] 🟡 AND-017 **Foreground services declare their type** and the matching permission, and run only for work the user started and can see.
+- [ ] 🟡 AND-018 **Permissions are the minimum:** every `uses-permission` in the merged manifest (including ones added by libraries) is needed; unneeded ones are removed with `tools:node="remove"`.
+- [ ] 🟡 AND-019 **Location is as coarse as the feature allows:** approximate location unless precision is needed; background location only with a clear in-app reason.
+
+### Storage and keys
+- [ ] 🔴 AND-020 **Secrets and keys live in the Android Keystore:** encryption keys are generated in the Keystore (hardware-backed where available), never hard-coded or stored next to the data they protect; tokens aren't in plain `SharedPreferences`.
+- [ ] 🔴 AND-021 **No world-readable files or shared storage for private data:** no `MODE_WORLD_READABLE`/`WRITEABLE`; personal data stays in app-private storage, not `Download/`, `DCIM/` or other shared folders.
+- [ ] 🟡 AND-022 **Local SQL is parameterised:** `rawQuery`, `execSQL` and Room `@RawQuery` use bound arguments, never strings built from input.
+
+### Build, release and supply chain
+- [ ] 🟡 AND-023 **R8 shrinking and obfuscation are on for release** (`isMinifyEnabled = true`) with keep rules that don't keep everything, and the mapping file is uploaded to the crash reporter so stack traces stay readable.
+- [ ] 🔴 AND-024 **Signing keys and passwords are not in the repo:** no `.jks`/`.keystore` files committed, no store or key passwords in `build.gradle` or `gradle.properties`; the upload key is separate from the app signing key (Play App Signing).
+- [ ] 🟡 AND-025 **Gradle dependencies come from trusted repositories:** no `jcenter()` or unknown Maven URLs, the Gradle wrapper is the official one, and versions are pinned (no `+` versions).
+- [ ] 🟡 AND-026 **Native libraries meet Play's current rules:** bundled `.so` files come from known sources, are up to date, and meet Play's current requirements for native code (such as page-size support). Look the requirement up.
+- [ ] 🟡 AND-027 **High-value actions can check the device and app are genuine** (Play Integrity API verified on the server) where abuse would cost money or harm users: payments, rewards, sign-up bonuses, voting.
+- [ ] 🟢 AND-028 **Tapjacking is blocked on sensitive buttons:** `filterTouchesWhenObscured` (or a check of `FLAG_WINDOW_IS_OBSCURED`) on confirm, pay and permission screens.
+
+<a id="ios"></a>
+
+## iOS apps
+
+Load this file when the project builds an iOS app: Swift or Objective-C, or the iOS side of React Native, Expo, Flutter, Capacitor or Ionic (`ios/`, `*.xcodeproj`, `Info.plist`, `Podfile`, `Package.swift`, or `ios` settings in `app.json` / `app.config.*`). Cross-platform store checks, including permission descriptions (MOB-002), the privacy manifest (MOB-004), the tracking prompt (MOB-006), Sign in with Apple (MOB-007), SDK requirements (MOB-008), App Transport Security basics (MOB-013), universal links (MOB-014) and the app-switcher snapshot (MOB-017), are in the **mobile** section; data kept on the device is in the **mobile-data** section. This file goes deeper on what's specific to iOS.
+
+Where to look: `Info.plist`, `*.entitlements`, `PrivacyInfo.xcprivacy`, the Xcode project's build settings and schemes, and the Swift/Objective-C sources the code map points to. For managed Expo apps, read the `ios` block (`infoPlist`, `entitlements`) and config plugins in `app.json` / `app.config.*`. Apple's current requirements change: look them up during the run from Apple's own pages and cite the URL; never state them from memory.
+
+Sources: OWASP MASVS and MASTG (iOS tests), Apple Platform Security guide, Apple developer documentation, App Store Review Guidelines.
+
+### Network
+- [ ] 🔴 IOS-001 **App Transport Security exceptions are narrow:** only per-domain exceptions under `NSExceptionDomains`, each with a reason; no `NSAllowsArbitraryLoadsInWebContent` or `NSAllowsArbitraryLoadsForMedia` unless a feature needs it; the minimum TLS version isn't lowered.
+- [ ] 🔴 IOS-002 **TLS checking is never switched off:** no `URLSession` delegate that accepts any server trust, no Alamofire `DisabledTrustEvaluator` (or similar) in release code, no "allow invalid certificates" flags.
+- [ ] 🟡 IOS-003 **Certificate pinning where money or health data moves**, with backup pins and a rotation plan, so a certificate change can't lock every user out.
+
+### Keys, files and backups
+- [ ] 🔴 IOS-004 **Secrets live in the Keychain with the right accessibility:** a `...ThisDeviceOnly` or `AfterFirstUnlock` class suited to the use, never the deprecated `kSecAttrAccessibleAlways`; no tokens or keys in `UserDefaults`, plists or files in the app container.
+- [ ] 🟡 IOS-005 **Files with personal data use complete data protection** (`.completeFileProtection` / `NSFileProtectionComplete`, or the app-wide default set in the entitlements) so they're unreadable while the device is locked.
+- [ ] 🟡 IOS-006 **Sensitive files are kept out of device and iCloud backups** (`isExcludedFromBackup`, or in `Caches` when they can be rebuilt).
+- [ ] 🟡 IOS-007 **App Groups and extensions share only what they need:** widgets, share and notification extensions read a minimal shared container; keychain access groups are as narrow as possible.
+
+### Sign-in and identity
+- [ ] 🔴 IOS-008 **Sign-in never happens in an embedded web view:** OAuth and other sign-in flows use `ASWebAuthenticationSession` (or the system browser) with PKCE, never a `WKWebView` that could read the user's password.
+- [ ] 🟡 IOS-009 **Face ID / Touch ID protects a Keychain item,** using `SecAccessControl` with a biometry flag, not a bare `LAContext.evaluatePolicy` true/false that a patched app could skip.
+- [ ] 🟢 IOS-010 **App Attest or DeviceCheck protects high-value APIs** (rewards, sign-up bonuses, voting) when Firebase App Check isn't used, with the assertion verified on the server.
+
+### Web content
+- [ ] 🔴 IOS-011 **WKWebView only:** no `UIWebView` anywhere, including inside third-party SDKs (Apple rejects apps that still contain it).
+- [ ] 🟡 IOS-012 **WKWebView bridges are safe:** `WKScriptMessageHandler` checks the message's origin and content; no file-URL universal access; only your own or allow-listed sites are loaded where native features are exposed.
+
+### Capabilities and configuration
+- [ ] 🟡 IOS-013 **Entitlements are the minimum:** associated domains match the `apple-app-site-association` file; push, iCloud, HealthKit, App Groups and others appear only when used; `aps-environment` is `production` in release builds.
+- [ ] 🟡 IOS-014 **Background modes match real features:** only the `UIBackgroundModes` the app uses (audio, location, fetch, processing). App Review rejects declared modes the app doesn't need.
+- [ ] 🟡 IOS-015 **Location is as limited as the feature allows:** "when in use" unless "always" is essential and explained; precise location only where needed.
+- [ ] 🟡 IOS-016 **Export compliance is declared correctly:** `ITSAppUsesNonExemptEncryption` in `Info.plist` matches what the app's encryption actually is.
+- [ ] 🟡 IOS-017 **Crash symbols are uploaded:** release builds upload dSYMs to the crash reporter (an upload step in the build or CI), so crash reports can be read.
+- [ ] 🟢 IOS-018 **Third-party keyboards are blocked for sensitive input** where the app handles passwords, card numbers or health data (`shouldAllowExtensionPointIdentifier` for keyboards).
+- [ ] 🟢 IOS-019 **Jailbreak detection, if used, is one signal among several,** never the only thing protecting money or data, and doesn't lock out honest users without a way forward.
+
+<a id="mobile-frameworks"></a>
+
+## React Native, Expo, Flutter, Capacitor and Ionic
+
+Load this file when the mobile app is built with a cross-platform framework: React Native or Expo (`react-native`, `expo` in `package.json`), Flutter (`pubspec.yaml`), Capacitor, Ionic or Cordova. These frameworks add their own layer between your code and the phone: a JavaScript or Dart bundle, native bridges, over-the-air updates and dev tooling. Load the **android** section and the **ios** section too, for each platform the app ships to. Secrets in the bundle are MOB-011 and token storage is MOB-012 in the **mobile** section.
+
+Where to look: `app.json` / `app.config.*` and `eas.json` (Expo), `package.json`, `metro.config.*`, `pubspec.yaml`, `capacitor.config.*`, `config.xml` (Cordova), the native bridge code under `android/` and `ios/`, and the screens and routes the code map points to.
+
+Sources: OWASP MASVS and MASTG, Expo, React Native, Flutter and Capacitor security documentation, the App Store Review Guidelines on code that changes after review.
+
+### Updates after release
+- [ ] 🔴 MFW-001 **Over-the-air updates are signed and controlled:** EAS Update code signing (or the equivalent for CodePush, Capgo, Shorebird) is on, only CI or named people can publish to the production channel, and the app rejects unsigned bundles.
+- [ ] 🟡 MFW-002 **Over-the-air updates stay within store rules:** they fix and adjust; they don't add features that change what the app is, its permissions or how it uses data without going through app review.
+
+### Release builds
+- [ ] 🔴 MFW-003 **Release builds run the bundled release code:** no development server URL (Metro, Expo dev client, Capacitor `server.url`) in production builds, `__DEV__`-only code really is unreachable in release, and Flutter release builds use `--release`.
+- [ ] 🟡 MFW-004 **Dev tooling is out of production:** Flipper, Reactotron, React Native debugger hooks, `expo-dev-client` and Flutter debug service extensions are development-only dependencies and aren't in the shipped app.
+- [ ] 🟡 MFW-005 **Production and development builds are separate:** EAS build profiles (or flavors/schemes) give production its own API URLs, keys and app ID, so a test build can never write to production data.
+- [ ] 🟢 MFW-006 **Flutter release builds are obfuscated** (`--obfuscate --split-debug-info`) and the symbol files are kept so crash reports can be read.
+
+### Native bridges and web layers
+- [ ] 🔴 MFW-007 **Native bridges check what they're given:** React Native native modules, Flutter platform channels and Capacitor/Cordova plugins validate every argument from the JavaScript/Dart side, and none offers a generic "run this", "open any file" or "call any URL" method.
+- [ ] 🔴 MFW-008 **Capacitor, Ionic and Cordova apps serve the app from the bundle:** no remote `server.url` in production, `allowNavigation` lists only your own domains, and the Content Security Policy blocks injected scripts from reaching native plugins.
+- [ ] 🟡 MFW-009 **`react-native-webview` (and similar) is restricted:** `originWhitelist` is your domains only, `onShouldStartLoadWithRequest` blocks unknown URLs, and `postMessage` handlers check where a message came from before acting.
+
+### Navigation, state and packages
+- [ ] 🔴 MFW-010 **Screens reached by a deep link enforce sign-in and permissions** (Expo Router, React Navigation linking, `go_router`): a link can't open an account, admin or payment screen without the same checks as normal navigation.
+- [ ] 🟡 MFW-011 **Persisted app state holds no personal data in plain form:** `redux-persist`, AsyncStorage, MMKV, Hive, `shared_preferences` and similar store only what's safe on a lost phone, or encrypt it.
+- [ ] 🟡 MFW-012 **Packages with native code are maintained:** React Native, Expo, Flutter and Capacitor plugins are recent, still maintained, and pass `npm audit` / `flutter pub outdated`; abandoned plugins that touch auth, payments or storage are replaced.
+
+<a id="firebase"></a>
+
+## Firebase and mobile backends
+
+Load this file when the app uses Firebase (`firebase.json`, `firestore.rules`, `storage.rules`, `database.rules.json`, `google-services.json`, `GoogleService-Info.plist`, or Firebase SDKs in the code). Most mobile apps keep their server side here, so this is where one user reaching another user's data usually goes wrong. The basics (rules not in test mode, ownership checks, App Check on, Cloud Functions checking auth, budget alerts) are PLT-011 to PLT-015 in the **platforms** section; this file goes deeper.
+
+Where to look: the rules files, `firebase.json`, `firestore.indexes.json`, the `functions/` folder, the Firebase calls in the app the code map points to, and any rules tests. Console-only settings (App Check enforcement, Auth settings, API key restrictions) can be read with the Firebase CLI or `gcloud` if the user allows it; otherwise they're `CHECK:` items with the exact console path.
+
+Sources: Firebase Security Rules and App Check documentation, Google Cloud API key guidance, OWASP MASVS.
+
+### Security rules
+- [ ] 🔴 FBS-001 **Rules deny by default:** every collection and storage path is matched explicitly; there's no broad recursive wildcard (`match /{document=**}`) that allows reads or writes, and anything not matched is refused.
+- [ ] 🔴 FBS-002 **Writes are validated field by field:** rules limit which keys a client may write (`request.resource.data.keys().hasOnly([...])`), check types and sizes, and keep fixed fields (owner ID, creation time, price, balance) from being changed by the client.
+- [ ] 🔴 FBS-003 **Admin and role checks come from custom claims set on the server** (`request.auth.token.admin`), never from a field in a document the user can write.
+- [ ] 🔴 FBS-004 **Storage rules tie paths to the signed-in user** (`/users/{uid}/...` matching `request.auth.uid`), limit file size and content type, and allow no public writes.
+- [ ] 🟡 FBS-005 **Realtime Database rules** don't set `.read` or `.write` to `true` at any level above user data, and use `.validate` for the shape of writes.
+- [ ] 🟡 FBS-006 **Rules have tests that run:** emulator tests (`@firebase/rules-unit-testing` or similar) prove that other users, signed-out users and wrong fields are refused, and they run in CI or before each deploy.
+- [ ] 🟡 FBS-007 **Queries are bounded:** reads use `limit` and pagination, listeners are detached when screens close, and the rules check `request.query.limit` where a large read would cost money or expose data.
+
+### Functions and App Check
+- [ ] 🔴 FBS-008 **App Check is enforced, not just monitored,** for Firestore, Storage and callable functions (`enforceAppCheck: true`), once the app's own traffic passes it.
+- [ ] 🔴 FBS-009 **Every callable and HTTP function checks who's calling:** callable functions use `request.auth` and refuse when it's missing; HTTP functions verify the Firebase ID token; functions acting for a user re-check that the user may do it, because the Admin SDK skips the rules.
+- [ ] 🟡 FBS-010 **Function secrets are in Secret Manager** (`defineSecret` or similar), not in code, `.env` files in the repo, or the deprecated runtime config; the functions' service account has only the roles it needs.
+- [ ] 🟡 FBS-011 **Functions can't run up an unlimited bill:** `maxInstances` (or concurrency limits), timeouts, and rate limits on public endpoints, so one abusive client can't scale costs without limit.
+
+### Project and keys
+- [ ] 🔴 FBS-012 **Production has its own Firebase project:** debug and test builds point to a separate project, so testing never touches real users' data.
+- [ ] 🟡 FBS-013 **Google API keys shipped in the app are restricted** to the app (Android package name and signing certificate SHA-1, iOS bundle ID) and to the APIs it uses. The key isn't secret, but an unrestricted one can be used by anyone, on your bill.
+- [ ] 🟡 FBS-014 **Auth settings are tightened:** email enumeration protection on, unused sign-in providers off, the authorized domains list has no leftover test or `localhost` entries in production, and password rules fit the app.
+- [ ] 🟡 FBS-015 **Push tokens belong to the signed-in user:** FCM tokens are stored per user under rules only that user can write, removed at sign-out and on account deletion, and messages are sent only from the server.
+- [ ] 🟡 FBS-016 **Remote Config holds no secrets and makes no security decisions:** values reach every device, so feature flags must not be the only thing stopping access to paid or admin features.
+- [ ] 🟡 FBS-017 **Analytics and Crashlytics respect consent and age:** collection is off until consent where the law requires it, off for minors where required (see the **kids-education** section), and custom events and keys carry no personal data.
+- [ ] 🟢 FBS-018 **No dependence on Firebase Dynamic Links,** which Google has shut down: links use App Links / universal links or another provider. Check Firebase's notice for the current status.
+
+<a id="mobile-data"></a>
+
+## Data on the device
+
+Load this file for every mobile app (native or cross-platform). A phone gets lost, shared, backed up and handed in for repair, so what the app leaves on it matters as much as what the server protects. Token storage is MOB-012 and the app-switcher snapshot is MOB-017 in the **mobile** section; Android and iOS details are in the **android** section and the **ios** section.
+
+Where to look: local database setup (SQLite, Room, Core Data, SwiftData, Realm, Hive, Isar, MMKV, WatermelonDB), HTTP and image cache settings, sign-out and account-deletion code, text fields for passwords, codes and card numbers, logging calls, and file export or share code.
+
+Sources: OWASP MASVS-STORAGE and MASVS-PRIVACY, Android and Apple platform security documentation.
+
+### Stored data
+- [ ] 🔴 MDV-001 **Local databases with personal, health or money data are encrypted** (SQLCipher, encrypted Realm or MMKV, or the platform's file protection with keys in the Keychain/Keystore), or that data isn't kept on the device at all.
+- [ ] 🟡 MDV-002 **Caches don't keep sensitive responses:** API responses with personal data aren't stored in the HTTP or image cache (`Cache-Control: no-store` honoured, `URLCache` and OkHttp caches configured), and cached files are cleared when they're no longer needed.
+- [ ] 🔴 MDV-003 **Sign-out and account deletion wipe the device:** tokens, Keychain/Keystore items, local databases, caches and downloaded files are removed, so the next person to use the phone sees nothing.
+- [ ] 🟡 MDV-004 **A reinstall doesn't bring back an old session:** iOS Keychain items survive uninstall, so the app clears leftover credentials on first launch after a fresh install.
+
+### Input, clipboard and logs
+- [ ] 🟡 MDV-005 **Sensitive fields don't leak through the keyboard:** passwords use secure entry, one-time codes use the one-time-code content type, and autocorrect and suggestions are off for card numbers, codes and other secrets so the keyboard doesn't learn them.
+- [ ] 🟡 MDV-006 **Sensitive values don't sit on the clipboard:** they can't be copied, or are marked sensitive (Android 13+) and expire (iOS `UIPasteboard` expiry, local-only).
+- [ ] 🔴 MDV-007 **Logs and crash reports carry no tokens or personal data:** no `print`, `console.log`, `Log.d`, `NSLog` or `os_log` of tokens, passwords, emails, health or money details in release builds; crash reporter keys and breadcrumbs are scrubbed.
+- [ ] 🟡 MDV-008 **Shared and exported files don't linger:** files created for sharing, printing or export are written to temporary storage and deleted afterwards, and never to shared folders other apps can read.
 
 <a id="community"></a>
 
@@ -1928,7 +2111,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.8.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -1943,7 +2126,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.7.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.8.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2085,6 +2268,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] Build, lint, type-check and tests ran only after `BUILDS: yes`; fixes went where the user chose (separate copy, branch or patch files), and `.vibe-check/fix-log.md` says which.
 - [ ] `codemap.py`, `autocheck.py` and `coverage.py --carry` ran before the modules (unless the user asked for a full re-run), helpers did only their IDs from `.vibe-check/redo.md`, and the report has the *Checks redone · carried over · settled by script* line.
 - [ ] `report_pdf.py` made the PDF, and both the `.md` and the `.pdf` were handed over as downloadable files (or with full paths and an open command), not just saved.
 - [ ] Every `ASK:` question was asked (as choices, before the report) or the user chose to skip it, and `.vibe-check/answers.md` records it; `CHECK:` items are in *🖥️ Check these yourself*, pasted from `coverage.py --check-list`. Every `CHECK:` was tried in the code and the database first (`tried:` names the search), questions in disguise were asked as questions, and the database question was asked if any item needed it. Each answer was checked against the code first; passes that rest on an answer alone are `ANSWER: … · code: …`, and every answer that added to the profile has an `ADDS:` line and its module was checked.
@@ -2105,12 +2289,17 @@ Fix only what the user approves ("fix", "fix all", "fix 2", "fix the blockers"�
 ### 1. The plan, before anything changes
 Run `coverage.py --fix-plan` (writes `.vibe-check/fix-plan.md`: every FAIL, CAN'T TELL and 🎯 hunt finding in priority order, statuses kept between sessions). Show it in the chat as the **Fix plan** from `references/report-template.md`, grouped as **🤖 I can fix these safely** (one OK for all), **🧑 Needs your decision** (asked one at a time, as choices), **🖥️ Only you can do these** (dashboard settings, key rotation, DNS: exact steps), and **⚖️ Needs a lawyer**. Say where the changes will go (next point). Nothing changes until the user says go.
 
-### 2. Where the changes go: branch or checkpoints
-- **Code tools with git** (Claude Code, Cursor, Codex, Windsurf, Cline, Copilot, Gemini CLI…): create a branch `vibe-check/fixes-YYYY-MM-DD` and tell the user. **One commit per fix** (`vibe-check: fix <ID> <short title>`). Never push, merge or force anything; the user does that.
+### 2. Where the changes go: branch, separate copy, patch files or checkpoints
+- **Code tools with git** (Claude Code, Cursor, Codex, Windsurf, Cline, Copilot, Gemini CLI…): **ask once, as a choice**, where the fixes go, because switching branches in a folder other sessions or people share disturbs their work:
+  - *A separate copy of the project (Recommended when other sessions, agents or people use this folder):* `git worktree add ../<project>-vibe-check-fixes -b vibe-check/fixes-YYYY-MM-DD`, then make every fix there. The main folder, its branch and its files stay exactly as they are.
+  - *A new branch in this folder (fine when you're the only one working here):* `git switch -c vibe-check/fixes-YYYY-MM-DD`.
+  - *Patch files only, no git changes:* write each fix as `.vibe-check/patches/<NN>-<ID>.patch` (`git diff` format) and change no project file; the user applies the ones they want with `git apply`.
+  
+  Whichever it is: **One commit per fix** (or one patch file per fix) (`vibe-check: fix <ID> <short title>`). Never push, merge or force anything; the user does that. Checks that run the build, lint or tests follow the user's `BUILDS:` answer here too: with `BUILDS: no`, say what to run and leave it to them.
 - **App builders that work only on the main branch** (Lovable, Replit, Bolt, v0, Base44 and similar): **no branch.** Before each fix, make the tool's own checkpoint or version if it has one, and save a copy of each file you'll change in `.vibe-check/backup/<fix number>/`.
 - **No git at all:** the same file copies in `.vibe-check/backup/`, so "undo fix N" can restore them.
 - **Unsaved changes already in the project** (`git status` not clean): stop and ask once, as a choice: *"You have unsaved changes. Save them in their own commit first (Recommended) · Fix on top of them · Stop"*. Never mix the user's work into a fix commit.
-- Record the branch (or checkpoint method) at the top of `.vibe-check/fix-log.md`.
+- Record where the fixes went (separate copy and its path, branch, patch files, or checkpoints) at the top of `.vibe-check/fix-log.md`.
 
 ### 3. One fix at a time, each with a fix card
 For each item, top down: mark it `IN PROGRESS`, post `🔧 Fix N of M · <title>`, apply the recipe (below), then **check it**: types and lint, the tests, a test for this bug, and **the same check ID re-run** (plus its hunt variants). Then show the **fix card** from `references/report-template.md` (Before · Changed · Checked · Saved · Users) and append it to `.vibe-check/fix-log.md`, with one `Changed <path>` line for every project file the fix touched: `coverage.py --verify-report` refuses a report when a project file changed and the log doesn't name it.
@@ -2232,6 +2421,12 @@ Never call the audit complete while a 🔴 item is FAIL or an unresolved CAN'T T
   - Client IP, one-time codes and password hashing limits
   - Authenticated encryption
   - Security alerts
+  - Android manifest and permissions
+  - Network trust, web views and sign-in on mobile
+  - Keys and data left on the phone
+  - Cross-platform release builds and bridges
+  - Firebase rules, functions and projects
+  - Apps for children in the stores
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -2735,6 +2930,42 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Trap:** a dashboard nobody opens.
 **Verify:** a test burst of failed logins produces an alert within minutes.
 
+#### Android manifest and permissions
+**Covers:** AND-001, AND-002, AND-003, AND-004, AND-005, AND-008, AND-016
+**Safe fix:** `android:allowBackup="false"` (or backup and data-extraction rules that exclude tokens and databases); release build type not debuggable and signed with the upload key; `android:exported` set on every component, with exported ones protected by a signature permission; providers not exported, with narrow `grantUriPermissions` and bound query arguments; FileProvider sharing named folders only; intents taken from extras checked against an allow-list before launch; restricted permissions removed unless a core feature needs them and the Play declaration is filed.
+**Trap:** a library adding an exported component or a restricted permission through manifest merging; check the merged manifest, not just yours.
+**Verify:** the merged manifest of a release build shows the expected attributes; `adb shell am start` on an exported activity from another app is refused; Play Console's pre-launch report raises no policy warnings.
+
+#### Network trust, web views and sign-in on mobile
+**Covers:** AND-010, AND-011, AND-013, AND-014, IOS-001, IOS-002, IOS-008, IOS-011
+**Safe fix:** remove trust-all TrustManagers, hostname verifiers and `proceed()` on SSL errors (Android) and any delegate or evaluator that accepts every server trust (iOS); keep cleartext and ATS exceptions per domain with a reason; user certificate authorities only under `<debug-overrides>`; WebViews with JavaScript and file access only where needed and bridges only for bundled content; replace `UIWebView`; move sign-in to Custom Tabs / `ASWebAuthenticationSession` with PKCE and verified App Links / universal links.
+**Trap:** a "temporary" trust-all client added for a staging server that ships in release, or a third-party SDK still bundling `UIWebView`.
+**Verify:** a proxy with an untrusted certificate (on a test device) can't read the app's traffic; the release build refuses an invalid certificate; sign-in opens the system browser sheet.
+
+#### Keys and data left on the phone
+**Covers:** AND-020, AND-021, AND-024, IOS-004, MDV-001, MDV-003, MDV-007
+**Safe fix:** keys generated in the Android Keystore / iOS Keychain with a device-only accessibility class; tokens out of `SharedPreferences`, `UserDefaults` and plain files; personal data encrypted at rest (SQLCipher, encrypted Realm or MMKV) or not stored; sign-out and account deletion clear tokens, keychain items, databases, caches and files; release logs stripped of tokens and personal data; signing keys and passwords moved out of the repo into CI secrets, with Play App Signing holding the app key.
+**Trap:** clearing the database on sign-out but leaving the refresh token in the Keychain, which survives even an uninstall on iOS.
+**Verify:** after sign-out, the app's storage (a backup or device dump of a test install) has no tokens or personal data; `git log --all -- '*.jks' '*.keystore'` finds nothing; release logs show no tokens.
+
+#### Cross-platform release builds and bridges
+**Covers:** MFW-001, MFW-003, MFW-007, MFW-008, MFW-010
+**Safe fix:** turn on code signing for over-the-air updates and limit who can publish to production; remove development server URLs and dev clients from production profiles; validate every argument in native modules, platform channels and plugins, and remove generic run/open/call methods; Capacitor/Cordova apps serve bundled files with `allowNavigation` limited to your domains and a strict CSP; add the same sign-in and role guards to deep-linked screens as to normal navigation.
+**Trap:** a deep link that opens a payment or admin screen directly, skipping the sign-in check that the tab bar enforces.
+**Verify:** an unsigned update bundle is rejected; a production build makes no request to a dev server; opening each deep link while signed out lands on sign-in.
+
+#### Firebase rules, functions and projects
+**Covers:** FBS-001, FBS-002, FBS-003, FBS-004, FBS-008, FBS-009, FBS-012
+**Safe fix:** explicit matches with a final deny; `hasOnly` key lists, type and size checks, and fixed fields that can't change on update; roles from custom claims set by a trusted function; storage paths keyed to `request.auth.uid` with size and type limits; App Check enforced once real traffic passes; every callable and HTTP function checks the caller and re-checks access because the Admin SDK bypasses rules; a separate Firebase project for development and test builds.
+**Trap:** a rules change that validates `create` but forgets `update`, so a user can edit their own balance after creating the document.
+**Verify:** emulator rules tests show another user, a signed-out user and an extra field are all refused; a call without App Check or auth is rejected; debug builds point to the development project.
+
+#### Apps for children in the stores
+**Covers:** MOB-025
+**Safe fix:** declare the target audience honestly in Play Console and App Store Connect; keep only SDKs the stores allow for children's apps; remove tracking and personalised ads for children; add a parental gate before external links, purchases and permission prompts; pair this with the consent work in the **kids-education** section.
+**Trap:** an analytics or ad SDK pulled in by another library that isn't on the stores' allowed list.
+**Verify:** the store's target-audience declaration matches the app; the dependency tree has no disallowed SDKs; links and purchases ask a parent first.
+
 <a id="sweep-patterns"></a>
 
 ## Sweep patterns
@@ -3047,16 +3278,16 @@ Sources (checked 2026-11-14): OWASP Top 10:2025 (top10.owasp.org), OWASP API Sec
 ### OWASP Mobile Top 10 (2024)
 | ID | Name | vibe-check checks |
 |---|---|---|
-| M1 | Improper Credential Usage | SEC-022, MOB-011 |
-| M2 | Inadequate Supply Chain Security | SEC-048, SUP-002, VUL-010 |
-| M3 | Insecure Authentication/Authorization | SEC-001, SEC-014, MOB-014 |
-| M4 | Insufficient Input/Output Validation | SEC-027, MOB-015 |
-| M5 | Insecure Communication | SEC-045, MOB-013 |
-| M6 | Inadequate Privacy Controls | LEG-001, MOB-003, MOB-004, MOB-006 |
-| M7 | Insufficient Binary Protections | MOB-016, Human: obfuscation and tamper resistance need a mobile binary review |
-| M8 | Security Misconfiguration | MOB-014, MOB-015, MOB-016 |
-| M9 | Insecure Data Storage | MOB-012, MOB-017 |
-| M10 | Insufficient Cryptography | SEC-041, SEC-042, SEC-047 |
+| M1 | Improper Credential Usage | SEC-022, MOB-011, AND-024, FBS-010, FBS-013 |
+| M2 | Inadequate Supply Chain Security | SEC-048, SUP-002, VUL-010, AND-025, AND-026, MFW-001, MFW-012 |
+| M3 | Insecure Authentication/Authorization | SEC-001, SEC-014, MOB-014, AND-014, IOS-008, IOS-009, MFW-010, FBS-003, FBS-009 |
+| M4 | Insufficient Input/Output Validation | SEC-027, MOB-015, AND-004, AND-008, AND-022, MFW-007, FBS-002 |
+| M5 | Insecure Communication | SEC-045, MOB-013, AND-010, AND-011, AND-012, IOS-001, IOS-002, IOS-003 |
+| M6 | Inadequate Privacy Controls | LEG-001, MOB-003, MOB-004, MOB-006, MDV-002, MDV-005, MDV-006, MDV-007, FBS-017 |
+| M7 | Insufficient Binary Protections | MOB-016, AND-023, AND-027, IOS-010, MFW-006, Human: obfuscation and tamper resistance need a mobile binary review |
+| M8 | Security Misconfiguration | MOB-014, MOB-015, MOB-016, AND-001, AND-002, AND-003, AND-005, AND-013, IOS-011, IOS-012, IOS-013, MFW-003, MFW-008, FBS-001, FBS-008 |
+| M9 | Insecure Data Storage | MOB-012, MOB-017, AND-020, AND-021, IOS-004, IOS-005, IOS-006, MDV-001, MDV-003, MDV-004 |
+| M10 | Insufficient Cryptography | SEC-041, SEC-042, SEC-047, AND-020, IOS-004 |
 
 ### OWASP ASVS 5.0.0 (by chapter)
 | ID | Name | vibe-check checks |

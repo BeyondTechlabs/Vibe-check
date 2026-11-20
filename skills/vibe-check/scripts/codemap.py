@@ -19,7 +19,7 @@ SKIP_DIRS = {"node_modules", ".git", ".next", ".nuxt", ".svelte-kit", ".output",
              ".vibe-check", "vendor", ".venv", "venv", "env", "__pycache__", ".turbo", ".vercel", ".netlify", ".expo",
              "Pods", "target", ".gradle", ".idea", ".cache", "storybook-static", ".wrangler", ".claude", ".agents"}
 CODE_EXT = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro", ".py", ".rb", ".php", ".go", ".dart",
-            ".kt", ".swift", ".html", ".sql", ".prisma", ".rules", ".toml", ".yaml", ".yml", ".json", ".sh", ".tf", ".env.example")
+            ".kt", ".kts", ".java", ".gradle", ".xml", ".plist", ".entitlements", ".xcprivacy", ".pbxproj", ".m", ".mm", ".h", ".pro", ".properties", ".swift", ".html", ".sql", ".prisma", ".rules", ".toml", ".yaml", ".yml", ".json", ".sh", ".tf", ".env.example")
 SKIP_FILES = re.compile(r"(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|.*\.min\.js|.*\.map)$")
 MAX_BYTES = 600_000
 
@@ -46,6 +46,21 @@ TOPICS = {
     "i18n": r"i18n|locale|translat|intl\.|toLocale|currency|timezone|date-fns|dayjs|moment|rtl|dir=",
     "policies": r"terms|privacy policy|refund policy|cookie policy|acceptable use|/legal|/terms|/privacy",
     "mobile": r"react-native|\bexpo\b|expo-|capacitor|\bionic\b|flutter|swiftui|\bandroid\b|\bios\b|push.?notification|deeplink|deep link",
+    "android": r"<manifest|<application|<activity|<service|<receiver|<provider|android:exported|allowbackup|dataextractionrules|debuggable|usescleartexttraffic|network_security_config|"
+               r"addjavascriptinterface|setallowfileaccess|onreceivedsslerror|trustmanager|hostnameverifier|fileprovider|"
+               r"pendingintent|getparcelableextra|sharedpreferences|keystore|rawquery|execsql|minifyenabled|signingconfig|uses-permission",
+    "ios": r"nsapptransportsecurity|nsallowsarbitraryloads|nsexceptiondomains|kseclass|ksecattraccessible|userdefaults|"
+           r"fileprotection|isexcludedfrombackup|wkwebview|uiwebview|wkscriptmessagehandler|aswebauthenticationsession|"
+           r"lacontext|secaccesscontrol|entitlements|uibackgroundmodes|itsappusesnonexemptencryption|urlsession",
+    "mobile-frameworks": r"expo-updates|eas update|codepush|capgo|__dev__|metro|flipper|reactotron|expo-dev-client|"
+                         r"nativemodules|methodchannel|platform channel|capacitor|server\.url|allownavigation|"
+                         r"react-native-webview|originwhitelist|linking|expo-router|go_router|redux-persist|asyncstorage|mmkv|hive",
+    "firebase": r"rules_version|match /|allow (read|write|create|update|delete)|request\.auth|request\.resource|"
+                r"onCall|onRequest|https\.oncall|enforceappcheck|appcheck|defineSecret|firebase-admin|getfirestore|"
+                r"collection\(|storage\(|messaging|fcm|remoteconfig|crashlytics|analytics",
+    "mobile-data": r"sqlite|sqlcipher|room|coredata|swiftdata|realm|hive|isar|mmkv|watermelon|cache|"
+                   r"securetextentry|onetimecode|textcontenttype|uipasteboard|clipboard|nslog|os_log|log\.d|console\.log|"
+                   r"signout|sign_out|logout|deleteaccount",
     "health": r"health|medical|patient|diagnos|symptom|prescription|hipaa|therapy|clinic",
     "kids-education": r"\bchild(ren)?\b|\bkids?\b|\bminors?\b|student|school|teacher|\bparents?\b|coppa|age.?gate|\bgrades?\b",
     "cloud-infra": r"terraform|aws_|gcp|azure|s3|iam|bucket|kubernetes|helm|vpc|security.?group",

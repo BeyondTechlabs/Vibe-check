@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.7.0"
+  version: "3.8.0"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
@@ -73,7 +73,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 3. **Never guess a PASS.** If you can't confirm something, mark it **CAN'T TELL** and turn it into a question for the user.
 4. **Distrust earlier AI work, your own included.** Check the blind spots in Step 3, even in code you remember writing carefully.
 5. **Never weaken anything to get a PASS:** no disabling tests, loosening RLS, widening CORS or adding empty `catch` blocks.
-6. **Use only safe actions.** Don't run destructive commands or touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app (live tests: say the extra time) or opening any copy of production data, and **never test real users' passwords**, even offline (`references/live-tests.md`). Anything that writes data (signups, form submits, profile edits) runs only on dev or staging, using test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with the user's approval and paid APIs mocked.
+6. **Use only safe actions.** No destructive commands; don't touch production data or credentials. Live checks on production are **read-only** (GET/HEAD requests). **Ask first, as a choice, before** running the app, its build, lint or tests (say the time it adds) or opening copies of production data, and **never test real users' passwords**, even offline (`references/live-tests.md`). Anything that writes data (signups, form submits, edits) runs only on dev or staging, with test accounts. **Never load-test or stress-test production** or any system the user doesn't own; load tests run only on staging or locally, with approval and paid APIs mocked.
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in `references/fixing.md`.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
@@ -202,9 +202,10 @@ Then write down:
 | Payments, wallets, lending, investing, payouts | `references/fintech.md` |
 | Full and Enterprise: policies the app must publish | `references/policies.md` |
 | Enterprise level, B2B or government buyers | `references/enterprise.md` |
-| A mobile app (iOS, Android, Expo, Capacitor, Flutter, React Native) | `references/mobile.md` |
-| Users post, chat, follow, review, or buy and sell from each other | `references/community.md` |
-| Runs on AWS, Google Cloud, Azure or similar, or uses Kubernetes, Terraform or Docker in production | `references/cloud-infra.md` |
+| A mobile app (last three: only the parts it uses) | `references/mobile.md`, `references/mobile-data.md`, `references/android.md`, `references/ios.md`, `references/mobile-frameworks.md` |
+| Firebase | `references/firebase.md` |
+| Users post, chat, follow, review or trade with each other | `references/community.md` |
+| AWS, Google Cloud, Azure, Kubernetes, Terraform or Docker in production | `references/cloud-infra.md` |
 | A desktop app (Electron, Tauri) or a browser extension | `references/desktop-extensions.md` |
 | Several languages or countries, or non-English users | `references/i18n.md` |
 | Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (two-account, role, logged-out, rate limits, errors, uploads, ZAP baseline, nuclei) | `references/live-tests.md` |

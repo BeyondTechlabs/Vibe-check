@@ -7,8 +7,8 @@
 Security · privacy · legal · reliability · launch, checked against your actual code, without changing what you built.
 
 [![Release](https://img.shields.io/github/v/release/BeyondTechlabs/Vibe-check?style=for-the-badge&color=22c55e&label=release)](https://github.com/BeyondTechlabs/Vibe-check/releases/latest)
-[![Checks](https://img.shields.io/badge/checks-653-18181b?style=for-the-badge)](skills/vibe-check/references)
-[![Fix recipes](https://img.shields.io/badge/fix_recipes-75-18181b?style=for-the-badge)](skills/vibe-check/references/fixes.md)
+[![Checks](https://img.shields.io/badge/checks-741-18181b?style=for-the-badge)](skills/vibe-check/references)
+[![Fix recipes](https://img.shields.io/badge/fix_recipes-81-18181b?style=for-the-badge)](skills/vibe-check/references/fixes.md)
 [![Stars](https://img.shields.io/github/stars/BeyondTechlabs/Vibe-check?style=for-the-badge&logo=github&color=18181b)](https://github.com/BeyondTechlabs/Vibe-check/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE)
 [![check](https://img.shields.io/github/actions/workflow/status/BeyondTechlabs/Vibe-check/check.yml?style=for-the-badge&label=self-test)](https://github.com/BeyondTechlabs/Vibe-check/actions/workflows/check.yml)
@@ -47,9 +47,9 @@ It works like a senior team in one command, covering what security, QA, legal an
 
 | | |
 |---|---|
-| 🔍 **Audit** | **19 AI blind-spot checks** plus **600+ checks** in 26 modules. It asks a few questions about your app and runs only the modules that apply |
+| 🔍 **Audit** | **19 AI blind-spot checks** plus **700+ checks** in 31 modules, including **112 for mobile apps** (Android, iOS, React Native, Expo, Flutter, Capacitor, Firebase). It asks a few questions about your app and runs only the modules that apply |
 | 📋 **Report** | A clear verdict (**🟢 SHIP / 🟡 SHIP AFTER FIXES / 🔴 DO NOT SHIP**), a **score out of 100** with a band (*Ready to scale · Ready to launch · Needs work · Not safe for real users yet*), a **totals table** (how many checks applied, passed, failed, and "checked 241 of 241") and a **scorecard per area**, all counted by a script, not written by the AI. You get it as a **`.md` and a branded PDF**, handed to you as files you can download and send. It ends with **every check and the evidence for it, passes included** (the file and line, or the command), so you can see what was checked, not just what failed. Six symbols with one meaning each: ✅ passed · ❌ must fix · ⚠️ should fix · ❓ your answer · ➖ doesn't apply · 🔧 being fixed |
-| 🛠️ **Fixes** | A **fix plan** first (what it can fix safely, what needs your decision, what only you can do), then **one fix card per fix**: before, what changed, what was checked, how to undo. If a check fails after a change, **the change is undone automatically**. Fixes go on a new branch with one commit each (or checkpoints in Lovable, Replit and Bolt). Built on a playbook of 75 fix recipes: **every 🔴 check points to one** |
+| 🛠️ **Fixes** | A **fix plan** first (what it can fix safely, what needs your decision, what only you can do), then **one fix card per fix**: before, what changed, what was checked, how to undo. If a check fails after a change, **the change is undone automatically**. Fixes go on a new branch with one commit each (or checkpoints in Lovable, Replit and Bolt). Built on a playbook of 81 fix recipes: **every 🔴 check points to one** |
 | 💾 **History** | Every run is saved in `.vibe-check/` (kept out of git). The next run shows **what changed since last time**: fixed, new, and problems that **came back** after an AI tool undid a fix |
 | 🗳️ **Questions as choices** | Questions show as **tap-to-choose cards** in tools that have them (Claude Code, Cursor, Gemini CLI, VS Code Copilot…) and as quick numbered choices everywhere else. It never asks what your code already answers, and it **asks its questions before writing the report**, so your answers count in the score. Each answer is **checked against your code first** (the code wins), passes that rest on your word alone are marked **✅ per your answer**, and an answer that reveals more ("students use it") **adds those checks** before the report. Things only you can look at (like a dashboard setting) get their own *Check these yourself* list, grouped by place so you open each place once, and only after vibe-check has tried your code and (with your OK) your database read-only |
 | 🧑‍💻 **For everyone** | Written for non-developers too. Every finding comes with a **copy-paste prompt** you can give any AI tool to fix it |
@@ -338,7 +338,7 @@ Every check is tagged **🔴 blocks launch**, **🟡 fix before scale or paying 
 ## Free & open source: what's included
 
 **Everything in this repo is free, forever (MIT):**
-- ✅ All 19 blind spots, 600+ checks and 26 modules, at all three levels
+- ✅ All 19 blind spots, 700+ checks and 31 modules, at all three levels
 - ✅ The fix playbook, fix plan and fix cards, the scope guard, and run-to-run history
 - ✅ Works in every tool listed above, with your own AI subscription
 - ✅ Uses free local tools when you have them (npm audit, gitleaks, Playwright, Lighthouse), with fallbacks when you don't
@@ -407,6 +407,11 @@ skills/vibe-check/          ← the skill (source of truth)
     ├── policies.md           profile: the policy pack
     ├── enterprise.md         profile: enterprise & government readiness
     ├── mobile.md             profile: iOS and Android apps
+    ├── android.md            profile: Android apps (manifest, network, WebViews, Play policy, signing)
+    ├── ios.md                profile: iOS apps (ATS, Keychain, sign-in, entitlements)
+    ├── mobile-frameworks.md  profile: React Native, Expo, Flutter, Capacitor, Ionic
+    ├── firebase.md           profile: Firebase rules, functions, App Check, projects
+    ├── mobile-data.md        profile: data left on the phone
     ├── community.md          profile: community, chat and marketplaces
     ├── cloud-infra.md        profile: AWS, GCP, Azure, Kubernetes, Terraform
     ├── desktop-extensions.md profile: Electron, Tauri, browser extensions

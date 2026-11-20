@@ -61,16 +61,16 @@ Sources (checked 2026-11-14): OWASP Top 10:2025 (top10.owasp.org), OWASP API Sec
 ## OWASP Mobile Top 10 (2024)
 | ID | Name | vibe-check checks |
 |---|---|---|
-| M1 | Improper Credential Usage | SEC-022, MOB-011 |
-| M2 | Inadequate Supply Chain Security | SEC-048, SUP-002, VUL-010 |
-| M3 | Insecure Authentication/Authorization | SEC-001, SEC-014, MOB-014 |
-| M4 | Insufficient Input/Output Validation | SEC-027, MOB-015 |
-| M5 | Insecure Communication | SEC-045, MOB-013 |
-| M6 | Inadequate Privacy Controls | LEG-001, MOB-003, MOB-004, MOB-006 |
-| M7 | Insufficient Binary Protections | MOB-016, Human: obfuscation and tamper resistance need a mobile binary review |
-| M8 | Security Misconfiguration | MOB-014, MOB-015, MOB-016 |
-| M9 | Insecure Data Storage | MOB-012, MOB-017 |
-| M10 | Insufficient Cryptography | SEC-041, SEC-042, SEC-047 |
+| M1 | Improper Credential Usage | SEC-022, MOB-011, AND-024, FBS-010, FBS-013 |
+| M2 | Inadequate Supply Chain Security | SEC-048, SUP-002, VUL-010, AND-025, AND-026, MFW-001, MFW-012 |
+| M3 | Insecure Authentication/Authorization | SEC-001, SEC-014, MOB-014, AND-014, IOS-008, IOS-009, MFW-010, FBS-003, FBS-009 |
+| M4 | Insufficient Input/Output Validation | SEC-027, MOB-015, AND-004, AND-008, AND-022, MFW-007, FBS-002 |
+| M5 | Insecure Communication | SEC-045, MOB-013, AND-010, AND-011, AND-012, IOS-001, IOS-002, IOS-003 |
+| M6 | Inadequate Privacy Controls | LEG-001, MOB-003, MOB-004, MOB-006, MDV-002, MDV-005, MDV-006, MDV-007, FBS-017 |
+| M7 | Insufficient Binary Protections | MOB-016, AND-023, AND-027, IOS-010, MFW-006, Human: obfuscation and tamper resistance need a mobile binary review |
+| M8 | Security Misconfiguration | MOB-014, MOB-015, MOB-016, AND-001, AND-002, AND-003, AND-005, AND-013, IOS-011, IOS-012, IOS-013, MFW-003, MFW-008, FBS-001, FBS-008 |
+| M9 | Insecure Data Storage | MOB-012, MOB-017, AND-020, AND-021, IOS-004, IOS-005, IOS-006, MDV-001, MDV-003, MDV-004 |
+| M10 | Insufficient Cryptography | SEC-041, SEC-042, SEC-047, AND-020, IOS-004 |
 
 ## OWASP ASVS 5.0.0 (by chapter)
 | ID | Name | vibe-check checks |

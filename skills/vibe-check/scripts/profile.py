@@ -81,6 +81,16 @@ SIGNALS = [
     # platforms
     ("Mobile app", "mobile", "strong", "mobile app project",
      re.compile(r"""["'](?:expo|react-native|@capacitor/core|@ionic/[\w-]+)["']\s*:|^\s*flutter:\s*$|AndroidManifest\.xml|UIApplicationMain|@main\s+struct\s+\w+\s*:\s*App""", I | re.M)),
+    ("Mobile app", "mobile-data", "strong", "mobile app project",
+     re.compile(r"""["'](?:expo|react-native|@capacitor/core|@ionic/[\w-]+|cordova-android|cordova-ios)["']\s*:|^\s*flutter:\s*$|UIApplicationMain|@main\s+struct\s+\w+\s*:\s*App|com\.android\.application""", I | re.M)),
+    ("Android app", "android", "strong", "Android build or Expo android settings",
+     re.compile(r"""com\.android\.(?:application|library)|xmlns:android=|^\s*["']android["']\s*:\s*\{""", I | re.M)),
+    ("iOS app", "ios", "strong", "iOS app code or Expo ios settings",
+     re.compile(r"""UIApplicationMain|@main\s+struct\s+\w+\s*:\s*App|import\s+UIKit|^\s*["']ios["']\s*:\s*\{|CFBundleIdentifier""", I | re.M)),
+    ("Cross-platform mobile framework", "mobile-frameworks", "strong", "React Native, Expo, Flutter, Capacitor, Ionic or Cordova",
+     re.compile(r"""["'](?:expo|react-native|@capacitor/core|@ionic/[\w-]+|cordova-android|cordova-ios)["']\s*:|^\s*flutter:\s*$""", I | re.M)),
+    ("Firebase backend", "firebase", "strong", "Firebase SDK or config",
+     re.compile(r"""["'](?:firebase|firebase-admin|firebase-functions|@react-native-firebase/[\w-]+|@angular/fire|reactfire)["']\s*:|^\s*firebase_core:|com\.google\.firebase|rules_version\s*=""", I | re.M)),
     ("Desktop app or extension", "desktop-extensions", "strong", "desktop app or browser extension",
      re.compile(r"""["'](?:electron|@tauri-apps/api|@tauri-apps/cli)["']\s*:|"manifest_version"\s*:\s*[23]""", I)),
     ("Cloud infrastructure", "cloud-infra", "strong", "infrastructure as code or cloud SDKs",
@@ -96,6 +106,11 @@ SIGNALS = [
 PATH_SIGNALS = [
     ("Several languages", "i18n", "strong", "locale folder", re.compile(r"(^|/)(locales?|i18n|lang|translations)/[\w-]+\.(json|ya?ml|po)$")),
     ("Mobile app", "mobile", "strong", "native project folder", re.compile(r"(^|/)(android/app/src/main/AndroidManifest\.xml|ios/[\w-]+\.xcodeproj/|pubspec\.yaml|capacitor\.config\.(ts|json)|app\.json)$")),
+    ("Mobile app", "mobile-data", "strong", "native project folder", re.compile(r"(^|/)(android/app/src/main/AndroidManifest\.xml|ios/[\w-]+\.xcodeproj/|pubspec\.yaml|capacitor\.config\.(ts|json))$")),
+    ("Android app", "android", "strong", "Android project file", re.compile(r"(^|/)(AndroidManifest\.xml|build\.gradle(\.kts)?)$")),
+    ("iOS app", "ios", "strong", "iOS project file", re.compile(r"(^|/)(Info\.plist|Podfile|[^/]+\.entitlements|PrivacyInfo\.xcprivacy)$|\.xcodeproj/")),
+    ("Cross-platform mobile framework", "mobile-frameworks", "strong", "framework config", re.compile(r"(^|/)(pubspec\.yaml|capacitor\.config\.(ts|js|json)|eas\.json|metro\.config\.(js|cjs|ts))$")),
+    ("Firebase backend", "firebase", "strong", "Firebase config file", re.compile(r"(^|/)(firebase\.json|firestore\.rules|storage\.rules|database\.rules\.json|google-services\.json|GoogleService-Info\.plist)$")),
     ("Children or students", "kids-education", "weak", "file or folder named for kids or schools", re.compile(r"(^|/)[^/]*(kids?|school|student|teacher|classroom|parent)[^/]*$", I)),
 ]
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## v3.8.0 (2026-11-20)
+
+**Mobile apps, properly: 112 mobile checks in six parts, and vibe-check now fits teams' working rules.**
+- **Five new mobile modules**, each loaded only when the app uses it (detected from the project):
+  - `android.md` (28): backups, release builds, exported components, content and file providers, intents, network security config, TLS, WebViews, sign-in, App Links, restricted permissions, Keystore, signing keys, R8, Gradle sources, native libraries, Play Integrity.
+  - `ios.md` (19): App Transport Security exceptions, TLS, pinning, Keychain classes, file protection, backups, App Groups, sign-in sessions, biometrics bound to the Keychain, App Attest, WKWebView, entitlements, background modes, location, export compliance, dSYMs.
+  - `mobile-frameworks.md` (12): signed over-the-air updates, release bundles, dev tooling, build profiles, native bridges, Capacitor/Cordova, RN WebViews, deep-linked screens, persisted state, plugins.
+  - `firebase.md` (18): deny-by-default rules, field-level write validation, claims, Storage rules, rules tests, bounded queries, App Check enforcement, callable/HTTP function auth, secrets, cost limits, separate projects, API key restrictions, Auth settings, FCM tokens, Remote Config, consent.
+  - `mobile-data.md` (8): encrypted local databases, caches, wiping on sign-out, reinstall, keyboard, clipboard, logs, shared files.
+- **Store readiness in `mobile.md`** gains the stores' family rules for children's apps, a web link for account deletion, and the closed-testing requirement (27 checks).
+- **Current store numbers are never stated from memory:** target API levels, SDK requirements and testing rules are looked up during the run.
+- **Six new fix recipes** for every new 🔴 check, and the new checks are mapped to the OWASP Mobile Top 10.
+- **The code map knows mobile files** (`.kt`, `.java`, `.gradle`, `.xml`, `.plist`, `.entitlements`…) and has Android, iOS, framework, Firebase and on-device sections.
+- **Asks before builds:** the build, lint, type-check and tests run only after *"May I run your build, lint and tests?"*. The answer is kept as `BUILDS: yes/no`. `coverage.py` refuses a ledger that ran them without a yes, and with a no, checks read the CI instead.
+- **Fixes go where you choose:** a separate copy of the project (a git worktree, recommended when other sessions or people share the folder), a new branch, or patch files only with no git changes.
+
 ## v3.7.0 (2026-11-19)
 
 **Fewer tokens per run, with the same checks.**

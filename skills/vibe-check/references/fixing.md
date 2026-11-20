@@ -7,12 +7,17 @@ Fix only what the user approves ("fix", "fix all", "fix 2", "fix the blockers"�
 ## 1. The plan, before anything changes
 Run `coverage.py --fix-plan` (writes `.vibe-check/fix-plan.md`: every FAIL, CAN'T TELL and 🎯 hunt finding in priority order, statuses kept between sessions). Show it in the chat as the **Fix plan** from `references/report-template.md`, grouped as **🤖 I can fix these safely** (one OK for all), **🧑 Needs your decision** (asked one at a time, as choices), **🖥️ Only you can do these** (dashboard settings, key rotation, DNS: exact steps), and **⚖️ Needs a lawyer**. Say where the changes will go (next point). Nothing changes until the user says go.
 
-## 2. Where the changes go: branch or checkpoints
-- **Code tools with git** (Claude Code, Cursor, Codex, Windsurf, Cline, Copilot, Gemini CLI…): create a branch `vibe-check/fixes-YYYY-MM-DD` and tell the user. **One commit per fix** (`vibe-check: fix <ID> <short title>`). Never push, merge or force anything; the user does that.
+## 2. Where the changes go: branch, separate copy, patch files or checkpoints
+- **Code tools with git** (Claude Code, Cursor, Codex, Windsurf, Cline, Copilot, Gemini CLI…): **ask once, as a choice**, where the fixes go, because switching branches in a folder other sessions or people share disturbs their work:
+  - *A separate copy of the project (Recommended when other sessions, agents or people use this folder):* `git worktree add ../<project>-vibe-check-fixes -b vibe-check/fixes-YYYY-MM-DD`, then make every fix there. The main folder, its branch and its files stay exactly as they are.
+  - *A new branch in this folder (fine when you're the only one working here):* `git switch -c vibe-check/fixes-YYYY-MM-DD`.
+  - *Patch files only, no git changes:* write each fix as `.vibe-check/patches/<NN>-<ID>.patch` (`git diff` format) and change no project file; the user applies the ones they want with `git apply`.
+  
+  Whichever it is: **One commit per fix** (or one patch file per fix) (`vibe-check: fix <ID> <short title>`). Never push, merge or force anything; the user does that. Checks that run the build, lint or tests follow the user's `BUILDS:` answer here too: with `BUILDS: no`, say what to run and leave it to them.
 - **App builders that work only on the main branch** (Lovable, Replit, Bolt, v0, Base44 and similar): **no branch.** Before each fix, make the tool's own checkpoint or version if it has one, and save a copy of each file you'll change in `.vibe-check/backup/<fix number>/`.
 - **No git at all:** the same file copies in `.vibe-check/backup/`, so "undo fix N" can restore them.
 - **Unsaved changes already in the project** (`git status` not clean): stop and ask once, as a choice: *"You have unsaved changes. Save them in their own commit first (Recommended) · Fix on top of them · Stop"*. Never mix the user's work into a fix commit.
-- Record the branch (or checkpoint method) at the top of `.vibe-check/fix-log.md`.
+- Record where the fixes went (separate copy and its path, branch, patch files, or checkpoints) at the top of `.vibe-check/fix-log.md`.
 
 ## 3. One fix at a time, each with a fix card
 For each item, top down: mark it `IN PROGRESS`, post `🔧 Fix N of M · <title>`, apply the recipe (below), then **check it**: types and lint, the tests, a test for this bug, and **the same check ID re-run** (plus its hunt variants). Then show the **fix card** from `references/report-template.md` (Before · Changed · Checked · Saved · Users) and append it to `.vibe-check/fix-log.md`, with one `Changed <path>` line for every project file the fix touched: `coverage.py --verify-report` refuses a report when a project file changed and the log doesn't name it.

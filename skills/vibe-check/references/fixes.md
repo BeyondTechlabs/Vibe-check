@@ -89,6 +89,12 @@
   - Client IP, one-time codes and password hashing limits
   - Authenticated encryption
   - Security alerts
+  - Android manifest and permissions
+  - Network trust, web views and sign-in on mobile
+  - Keys and data left on the phone
+  - Cross-platform release builds and bridges
+  - Firebase rules, functions and projects
+  - Apps for children in the stores
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -591,3 +597,40 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Safe fix:** send the security events listed in the check to the same alert channel as production errors, with thresholds (for example 20 failed logins a minute) and a named person who gets them.
 **Trap:** a dashboard nobody opens.
 **Verify:** a test burst of failed logins produces an alert within minutes.
+
+### Android manifest and permissions
+**Covers:** AND-001, AND-002, AND-003, AND-004, AND-005, AND-008, AND-016
+**Safe fix:** `android:allowBackup="false"` (or backup and data-extraction rules that exclude tokens and databases); release build type not debuggable and signed with the upload key; `android:exported` set on every component, with exported ones protected by a signature permission; providers not exported, with narrow `grantUriPermissions` and bound query arguments; FileProvider sharing named folders only; intents taken from extras checked against an allow-list before launch; restricted permissions removed unless a core feature needs them and the Play declaration is filed.
+**Trap:** a library adding an exported component or a restricted permission through manifest merging; check the merged manifest, not just yours.
+**Verify:** the merged manifest of a release build shows the expected attributes; `adb shell am start` on an exported activity from another app is refused; Play Console's pre-launch report raises no policy warnings.
+
+### Network trust, web views and sign-in on mobile
+**Covers:** AND-010, AND-011, AND-013, AND-014, IOS-001, IOS-002, IOS-008, IOS-011
+**Safe fix:** remove trust-all TrustManagers, hostname verifiers and `proceed()` on SSL errors (Android) and any delegate or evaluator that accepts every server trust (iOS); keep cleartext and ATS exceptions per domain with a reason; user certificate authorities only under `<debug-overrides>`; WebViews with JavaScript and file access only where needed and bridges only for bundled content; replace `UIWebView`; move sign-in to Custom Tabs / `ASWebAuthenticationSession` with PKCE and verified App Links / universal links.
+**Trap:** a "temporary" trust-all client added for a staging server that ships in release, or a third-party SDK still bundling `UIWebView`.
+**Verify:** a proxy with an untrusted certificate (on a test device) can't read the app's traffic; the release build refuses an invalid certificate; sign-in opens the system browser sheet.
+
+### Keys and data left on the phone
+**Covers:** AND-020, AND-021, AND-024, IOS-004, MDV-001, MDV-003, MDV-007
+**Safe fix:** keys generated in the Android Keystore / iOS Keychain with a device-only accessibility class; tokens out of `SharedPreferences`, `UserDefaults` and plain files; personal data encrypted at rest (SQLCipher, encrypted Realm or MMKV) or not stored; sign-out and account deletion clear tokens, keychain items, databases, caches and files; release logs stripped of tokens and personal data; signing keys and passwords moved out of the repo into CI secrets, with Play App Signing holding the app key.
+**Trap:** clearing the database on sign-out but leaving the refresh token in the Keychain, which survives even an uninstall on iOS.
+**Verify:** after sign-out, the app's storage (a backup or device dump of a test install) has no tokens or personal data; `git log --all -- '*.jks' '*.keystore'` finds nothing; release logs show no tokens.
+
+### Cross-platform release builds and bridges
+**Covers:** MFW-001, MFW-003, MFW-007, MFW-008, MFW-010
+**Safe fix:** turn on code signing for over-the-air updates and limit who can publish to production; remove development server URLs and dev clients from production profiles; validate every argument in native modules, platform channels and plugins, and remove generic run/open/call methods; Capacitor/Cordova apps serve bundled files with `allowNavigation` limited to your domains and a strict CSP; add the same sign-in and role guards to deep-linked screens as to normal navigation.
+**Trap:** a deep link that opens a payment or admin screen directly, skipping the sign-in check that the tab bar enforces.
+**Verify:** an unsigned update bundle is rejected; a production build makes no request to a dev server; opening each deep link while signed out lands on sign-in.
+
+### Firebase rules, functions and projects
+**Covers:** FBS-001, FBS-002, FBS-003, FBS-004, FBS-008, FBS-009, FBS-012
+**Safe fix:** explicit matches with a final deny; `hasOnly` key lists, type and size checks, and fixed fields that can't change on update; roles from custom claims set by a trusted function; storage paths keyed to `request.auth.uid` with size and type limits; App Check enforced once real traffic passes; every callable and HTTP function checks the caller and re-checks access because the Admin SDK bypasses rules; a separate Firebase project for development and test builds.
+**Trap:** a rules change that validates `create` but forgets `update`, so a user can edit their own balance after creating the document.
+**Verify:** emulator rules tests show another user, a signed-out user and an extra field are all refused; a call without App Check or auth is rejected; debug builds point to the development project.
+
+### Apps for children in the stores
+**Covers:** MOB-025
+**Safe fix:** declare the target audience honestly in Play Console and App Store Connect; keep only SDKs the stores allow for children's apps; remove tracking and personalised ads for children; add a parental gate before external links, purchases and permission prompts; pair this with the consent work in `kids-education.md`.
+**Trap:** an analytics or ad SDK pulled in by another library that isn't on the stores' allowed list.
+**Verify:** the store's target-audience declaration matches the app; the dependency tree has no disallowed SDKs; links and purchases ask a parent first.
+

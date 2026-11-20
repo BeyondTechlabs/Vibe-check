@@ -2,6 +2,8 @@
 
 Load this file when the project contains a mobile app: native iOS or Android, React Native, Expo, Capacitor, Ionic, Flutter or a store-published PWA wrapper. App store rejections and mobile-only security problems are among the most common launch blockers. Check `Info.plist`, `PrivacyInfo.xcprivacy`, `AndroidManifest.xml`, `app.json`/`app.config.*`, `capacitor.config.*`, `build.gradle`, and the native project folders.
 
+**Also load, for each part the app has:** `android.md` (Android), `ios.md` (iOS), `mobile-frameworks.md` (React Native, Expo, Flutter, Capacitor, Ionic), `firebase.md` (Firebase backend) and always `mobile-data.md` (data left on the phone). Each part is a module of its own; ones the app doesn't use get one `N/A` row.
+
 ## App store requirements
 - [ ] 🔴 MOB-001 **Account deletion inside the app** if the app lets people create accounts (Apple and Google both require it). The flow deletes server data too, not just the local session.
 - [ ] 🔴 MOB-002 **Permission purpose strings for every permission the app can trigger:** `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSMicrophoneUsageDescription`, `NSLocationWhenInUseUsageDescription` and so on, in clear words. A missing string makes iOS **crash** the app when that feature is used (for example "Take Photo" in a file picker on iPad).
@@ -13,6 +15,9 @@ Load this file when the project contains a mobile app: native iOS or Android, Re
 - [ ] 🟡 MOB-008 **Target and minimum SDK versions** meet Google Play's current target API requirement and Apple's current SDK requirement.
 - [ ] 🟡 MOB-009 **Store listing is honest:** screenshots, description, age rating and content questionnaire match the app (e.g. user chat or AI features change the rating). A support URL and privacy policy URL work.
 - [ ] 🟡 MOB-010 **Review notes and a demo account** are prepared for app review if features need sign-in.
+- [ ] 🔴 MOB-025 **Apps for children follow the stores' family rules:** if children are in the audience, the app meets Google Play's Families policy and Apple's Kids Category rules (approved ad and analytics SDKs only, no tracking, parental gates on links and purchases). See `kids-education.md` for the laws.
+- [ ] 🟡 MOB-026 **Account deletion can also be requested on the web,** at a link given in the Google Play Data safety form, for people who've already uninstalled the app.
+- [ ] 🟡 MOB-027 **The release path meets the stores' testing rules:** a closed or TestFlight testing track has run, and new Google Play developer accounts meet Play's current closed-testing requirement before production. Look the requirement up.
 
 ## Mobile security
 - [ ] 🔴 MOB-011 **No secrets in the app bundle:** API secret keys, service-role keys and private tokens aren't in the JS bundle, `.env` files compiled into the app, `Info.plist`, `strings.xml` or `google-services.json` beyond the public config. Anything shipped in an app can be extracted.

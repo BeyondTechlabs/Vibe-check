@@ -62,7 +62,8 @@ CAP_WITH_BLOCKERS = 69          # while any blocker (🔴 FAIL) is open, the sco
 BANDS = [(90, "Ready to scale"), (75, "Ready to launch"), (60, "Needs work"), (0, "Not safe for real users yet")]
 AREAS = [  # every checklist module belongs to exactly one area (validate.py checks this)
     ("AI blind spots", ["blind-spots"]),
-    ("Security", ["security", "platforms", "supply-chain", "vulnerabilities", "cloud-infra", "desktop-extensions", "hunt", "live-tests"]),
+    ("Security", ["security", "platforms", "supply-chain", "vulnerabilities", "cloud-infra", "desktop-extensions", "hunt", "live-tests",
+                  "android", "ios", "mobile-frameworks", "firebase", "mobile-data"]),
     ("AI features", ["ai-features", "ai-agents"]),
     ("Payments", ["fintech"]),
     ("Privacy & legal", ["legal-privacy", "lawsuits", "policies", "kids-education", "health", "community"]),
@@ -108,6 +109,30 @@ ON_WORD = re.compile(r"\b(?:user (?:confirmed|says|said|told)|per (?:the )?user|
 def is_on_word(ev: str) -> bool:
     """A PASS that rests only on the user's answer (ANSWER: ... · code: ...)."""
     return ev.strip().upper().startswith("ANSWER:")
+
+
+BUILD_CMD = re.compile(r"\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:build|test|lint|typecheck|type-check|check)\b|\btsc\b|"
+                       r"\b(?:next|vite|astro|nuxt|turbo)\s+build\b|\bgradlew?\b|\bxcodebuild\b|\bflutter\s+(?:build|test|analyze)\b|"
+                       r"\b(?:pytest|jest|vitest|eslint|playwright\s+test)\b|\bpod\s+install\b|\bexpo\s+(?:prebuild|run)\b|\beas\s+build\b")
+
+
+def builds_problems(ledger_text: str, ans_text: str):
+    """v3.8: builds, lint, type-checks and tests run only after the user said yes (BUILDS: yes in answers.md)."""
+    m = re.search(r"^\s*[-*]?\s*BUILDS\s*:\s*(\w+)", ans_text, re.M | re.I)
+    allowed = m.group(1).lower() if m else None
+    sec = re.search(r"^##\s*Tools run\s*$(.*?)(?=^##\s|\Z)", ledger_text, re.M | re.S)
+    if not sec:
+        return []
+    ran = [line.strip() for line in sec.group(1).splitlines()
+           if line.strip().startswith("|") and BUILD_CMD.search(line) and not re.search(r"\bnot run\b", line, re.I)]
+    if not ran or allowed == "yes":
+        return []
+    first = ran[0][:90]
+    if allowed is None:
+        return [f"TOOLS: {len(ran)} build, lint or test command(s) ran (e.g. {first}) without asking. Ask once: 'May I run your build, "
+                f"lint and tests?' and write 'BUILDS: yes' or 'BUILDS: no' in .vibe-check/answers.md"]
+    return [f"TOOLS: the user said no builds (BUILDS: {allowed}), but {len(ran)} build, lint or test command(s) ran (e.g. {first}). "
+            f"Don't run them; mark them 'not run: you said no builds'"]
 
 
 def load_answers(vc_dir: Path):
@@ -806,6 +831,7 @@ def main() -> int:
     order, checks, prefixes = load_checklist()
     errors, warns = [], []
     ans_text, answered, adds = load_answers(ledger_path.parent)
+    errors.extend(builds_problems(text, ans_text))
     ANSWER_ADDS.clear(); ANSWER_ADDS.update(adds)
     known_mods = {v[0] for v in checks.values()}
     for a in adds:
@@ -1220,7 +1246,7 @@ def main() -> int:
         print("\n## Standards (how this audit's checks came out for each item; not a certification)\n")
         print("| Standard | ✅ | ❌ | ◐ | ➖ | Items that failed |")
         print("|---|---|---|---|---|---|")
-        only_if = {"Mobile": (["mobile"], "no mobile app"), "LLM": (["ai-features", "ai-agents"], "no AI features")}
+        only_if = {"Mobile": (["mobile", "android", "ios", "mobile-frameworks", "mobile-data"], "no mobile app"), "LLM": (["ai-features", "ai-agents"], "no AI features")}
         for title, items in stds:
             gate = next((v for k, v in only_if.items() if k in title), None)
             if gate and all(status_of(c, results, checks) == "NA" for c in required if checks[c][0] in gate[0]):

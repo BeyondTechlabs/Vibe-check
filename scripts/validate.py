@@ -415,6 +415,20 @@ for _name, _txt, _musts in [("SKILL.md", skill_main, ["codemap.py", "autocheck.p
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.7)")
 
+# 32. v3.8 mobile apps: six mobile parts, detection for each, ask before builds, fixes where the user chooses
+for _mod, _min in [("android", 25), ("ios", 15), ("mobile-frameworks", 10), ("firebase", 15), ("mobile-data", 8), ("mobile", 25)]:
+    _f = REFS / f"{_mod}.md"
+    _n = len(re.findall(r"^- \[ \] ", _f.read_text(), re.M)) if _f.exists() else 0
+    if _n < _min: err(f"{_mod}.md has {_n} checks; v3.8 expects at least {_min}")
+for _must in ["BUILD_CMD", "def builds_problems(", "BUILDS: yes"]:
+    if _must not in _cov: err(f"coverage.py is missing '{_must}' (v3.8)")
+for _name, _txt, _musts in [("ledger.md", _led, ["`BUILDS: yes`", "`BUILDS: no`", "not run: you said no builds"]),
+                            ("fixing.md", _fx, ["git worktree add", ".vibe-check/patches/", "A separate copy of the project"]),
+                            ("SKILL.md", skill_main, ["its build, lint or tests", "references/android.md", "references/ios.md",
+                                                      "references/mobile-frameworks.md", "references/firebase.md", "references/mobile-data.md"])]:
+    for _m in _musts:
+        if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.8)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -497,7 +511,8 @@ cov_src2 = (SCRIPTS / "coverage.py").read_text()
 for must in ["def check_evidence", "def sample_ids", "--verify-report", "--fix-plan", "ledger.d", "modules_with_evidence", "DEAD CODE:"]:
     if must not in cov_src2: err(f"coverage.py is missing '{must}' (v3.1)")
 prof_src = (SCRIPTS / "profile.py").read_text() if (SCRIPTS / "profile.py").exists() else ""
-for mod in ["kids-education", "fintech", "health", "ai-features", "ai-agents", "community", "mobile", "desktop-extensions", "cloud-infra", "i18n"]:
+for mod in ["kids-education", "fintech", "health", "ai-features", "ai-agents", "community", "mobile", "android", "ios", "mobile-frameworks",
+            "firebase", "mobile-data", "desktop-extensions", "cloud-infra", "i18n"]:
     if f'"{mod}"' not in prof_src: err(f"profile.py has no signals for the {mod} module")
     elif mod not in {f.replace(".md", "") for f in ref_files}: err(f"profile.py names {mod}, which isn't a module file")
 if "LEG-036" not in all_ids: err("legal-privacy.md lost LEG-036 (real audience assessed from evidence)")
