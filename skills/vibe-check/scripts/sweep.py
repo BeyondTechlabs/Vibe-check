@@ -22,7 +22,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SKIP_DIRS = {
+SKIP_DIRS = {".dart_tool", "DerivedData", ".cxx", ".externalNativeBuild", ".symlinks", "ephemeral", "xcuserdata", ".expo-shared", ".fvm", "Carthage", ".kotlin", "Pods", ".gradle", ".expo", 
     "node_modules", ".git", ".next", ".nuxt", ".svelte-kit", ".output", "dist", "build", "out", "coverage",
     ".vibe-check", "vendor", ".venv", "venv", "env", "__pycache__", ".turbo", ".vercel", ".netlify", ".expo",
     "Pods", "target", ".gradle", ".idea", ".cache", ".parcel-cache", "storybook-static", ".wrangler",

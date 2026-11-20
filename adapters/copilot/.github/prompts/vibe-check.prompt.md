@@ -1422,6 +1422,10 @@ Load this file when the project contains a mobile app: native iOS or Android, Re
 
 **Also load, for each part the app has:** the **android** section (Android), the **ios** section (iOS), the **mobile-frameworks** section (React Native, Expo, Flutter, Capacitor, Ionic), the **firebase** section (Firebase backend) and always the **mobile-data** section (data left on the phone). Each part is a module of its own; ones the app doesn't use get one `N/A` row.
 
+**Already done for you by the scripts:** `inventory.py` lists every Android component (exported or not), permission, deep link, WebView, native bridge and Firebase rules path: each one needs a verdict. `autocheck.py` settles the mobile checks the files decide for certain (backups, debuggable releases, cleartext, FileProvider roots, signing passwords, ATS off, a missing privacy manifest, `UIWebView`, open Firebase rules); don't redo those rows.
+
+**A built app, if there is one:** the final app can differ from the source (libraries add permissions and components). If the user has a release APK or IPA, **ask first**, then run `python3 <skill-folder>/scripts/appscan.py <file> .`: it only reads the archive, and writes `.vibe-check/appscan.md` with the merged manifest or Info.plist findings, masked secrets and test or staging addresses left in the build. Use its findings as evidence (`appscan.md: …`).
+
 ### App store requirements
 - [ ] 🔴 MOB-001 **Account deletion inside the app** if the app lets people create accounts (Apple and Google both require it). The flow deletes server data too, not just the local session.
 - [ ] 🔴 MOB-002 **Permission purpose strings for every permission the app can trigger:** `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSMicrophoneUsageDescription`, `NSLocationWhenInUseUsageDescription` and so on, in clear words. A missing string makes iOS **crash** the app when that feature is used (for example "Take Photo" in a file picker on iPad).
@@ -2111,7 +2115,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v3.8.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.9.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -2126,7 +2130,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v3.8.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v3.9.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2268,6 +2272,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] Mobile apps: every inventory item (components, permissions, deep links, WebViews, bridges, Firebase paths) has a verdict, and `appscan.py` ran on a built app only after the user said yes.
 - [ ] Build, lint, type-check and tests ran only after `BUILDS: yes`; fixes went where the user chose (separate copy, branch or patch files), and `.vibe-check/fix-log.md` says which.
 - [ ] `codemap.py`, `autocheck.py` and `coverage.py --carry` ran before the modules (unless the user asked for a full re-run), helpers did only their IDs from `.vibe-check/redo.md`, and the report has the *Checks redone · carried over · settled by script* line.
 - [ ] `report_pdf.py` made the PDF, and both the `.md` and the `.pdf` were handed over as downloadable files (or with full paths and an open command), not just saved.

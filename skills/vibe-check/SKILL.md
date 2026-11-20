@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits AI-built apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?", "security audit".
 license: MIT
 metadata:
-  version: "3.8.0"
+  version: "3.9.0"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 

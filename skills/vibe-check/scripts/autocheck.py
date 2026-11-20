@@ -9,6 +9,7 @@ helpers. Rows start with `AUTO:`, and coverage.py re-runs the rule when it count
 can't be typed by hand or go stale. Read-only; nothing is sent anywhere. Python 3.8+, standard library only.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,7 +28,7 @@ FROZEN = re.compile(r"\bnpm ci\b|pnpm install[^\n]*--frozen-lockfile|yarn instal
                     r"bun install[^\n]*--frozen-lockfile|poetry install|uv sync[^\n]*--(?:frozen|locked)|pip install[^\n]*-r requirements")
 PLATFORM_ENV = {"NODE_ENV", "CI", "PORT", "HOST", "HOSTNAME", "PWD", "HOME", "PATH", "TZ", "DEBUG", "MODE", "DEV", "PROD", "SSR",
                 "BASE_URL", "VITE_USER_NODE_ENV", "NEXT_RUNTIME", "VERCEL", "NETLIFY", "DENO_DEPLOYMENT_ID"}
-SKIP = {"node_modules", ".git", ".vibe-check", "dist", "build", ".next", "vendor", ".venv", "venv"}
+SKIP = {".dart_tool", "DerivedData", ".cxx", ".externalNativeBuild", ".symlinks", "ephemeral", "xcuserdata", ".expo-shared", ".fvm", "Carthage", ".kotlin", "Pods", ".gradle", ".expo", "node_modules", ".git", ".vibe-check", "dist", "build", ".next", "vendor", ".venv", "venv"}
 
 
 def tracked(root: Path):
@@ -201,8 +202,171 @@ def r_seo(root, git, cid):
     return None
 
 
+# ---- v3.9: mobile rules (Android, iOS, Firebase). Only answers the files decide for certain. ----
+def find_files(root: Path, pred):
+    out = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP)
+        for fn in sorted(filenames):
+            rel = (Path(dirpath) / fn).relative_to(root).as_posix()
+            if pred(rel):
+                out.append(rel)
+    return out
+
+
+def line_of(text, pos):
+    return text.count("\n", 0, pos) + 1
+
+
+def read(root, rel):
+    try:
+        return (root / rel).read_text("utf-8", "replace")
+    except OSError:
+        return ""
+
+
+def main_manifests(root):
+    return [r for r in find_files(root, lambda r: r.endswith("AndroidManifest.xml")) if "/src/debug/" not in r and "/src/androidTest/" not in r]
+
+
+def r_and001(root, git, cid):
+    mans = main_manifests(root)
+    if not mans:
+        return None
+    for rel in mans:
+        text = read(root, rel)
+        m = re.search(r"<application\b[^>]*>", text, re.S)
+        if not m:
+            continue
+        tag = m.group(0)
+        if re.search(r'android:allowBackup="false"', tag):
+            return ("PASS", f'AUTO: {rel}:{line_of(text, m.start())} sets android:allowBackup="false"')
+        if re.search(r"android:(dataExtractionRules|fullBackupContent)=", tag):
+            return None          # backup rules exist: whether they exclude the right files needs a helper
+        if re.search(r'android:allowBackup="true"', tag):
+            return ("FAIL", f'AUTO: {rel}:{line_of(text, m.start())} sets android:allowBackup="true" with no backup rules excluding private data')
+        return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} has no android:allowBackup and no backup rules, so backups are on by default")
+    return None
+
+
+def r_and002(root, git, cid):
+    for rel in main_manifests(root):
+        text = read(root, rel)
+        m = re.search(r'android:debuggable="true"', text)
+        if m:
+            return ("FAIL", f'AUTO: {rel}:{line_of(text, m.start())} sets android:debuggable="true" in the main manifest')
+    for rel in find_files(root, lambda r: re.search(r"(^|/)build\.gradle(\.kts)?$", r) is not None):
+        text = read(root, rel)
+        m = re.search(r"\brelease\s*\{[^{}]*?\b(?:isDebuggable\s*=\s*true|debuggable\s*(?:=\s*)?true)", text, re.S)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} makes the release build type debuggable")
+    return None
+
+
+def r_and005(root, git, cid):
+    for rel in find_files(root, lambda r: "/res/xml/" in r and r.endswith(".xml")):
+        text = read(root, rel)
+        if "<paths" not in text:
+            continue
+        m = re.search(r"<root-path\b|<(?:files|external|cache|external-files|external-cache)-path\b[^>]*\bpath=\"(?:\.|/)\"", text)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} shares a whole storage root through the FileProvider")
+    return None
+
+
+def r_and010(root, git, cid):
+    for rel in main_manifests(root):
+        text = read(root, rel)
+        m = re.search(r'android:usesCleartextTraffic="true"', text)
+        if m:
+            return ("FAIL", f'AUTO: {rel}:{line_of(text, m.start())} allows cleartext traffic for the whole app (android:usesCleartextTraffic="true")')
+    for rel in find_files(root, lambda r: "/res/xml/" in r and r.endswith(".xml") and "/src/debug/" not in r):
+        text = read(root, rel)
+        if "<network-security-config" not in text:
+            continue
+        body = re.sub(r"<debug-overrides>.*?</debug-overrides>", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
+        m = re.search(r'<base-config\b[^>]*cleartextTrafficPermitted="true"', body)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(body, m.start())} allows cleartext for every domain (base-config)")
+        m = re.search(r'<certificates\b[^>]*src="user"', body)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(body, m.start())} trusts user-installed certificates outside debug-overrides")
+    return None
+
+
+def r_and024(root, git, cid):
+    if git is not None:
+        keys = sorted(f for f in git if f.endswith((".jks", ".keystore")) and not f.endswith("debug.keystore"))
+        if keys:
+            return ("FAIL", f"AUTO: signing key file committed: {keys[0]} (`git ls-files`)")
+    for rel in find_files(root, lambda r: re.search(r"(^|/)(build\.gradle(\.kts)?|gradle\.properties)$", r) is not None):
+        text = read(root, rel)
+        m = re.search(r"""(?:storePassword|keyPassword|STORE_PASSWORD|KEY_PASSWORD)\s*[=:]?\s*["']?(?!\$|System\.getenv|project\.|findProperty|keystoreProperties)[^"'\s$]{4,}""", text)
+        if m and git is not None and rel in git:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} has a signing password written in a committed file")
+    return None
+
+
+def r_ios001(root, git, cid):
+    for rel in find_files(root, lambda r: r.endswith("Info.plist")):
+        text = read(root, rel)
+        m = re.search(r"<key>NSAllowsArbitraryLoads</key>\s*<true\s*/>", text)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} switches App Transport Security off (NSAllowsArbitraryLoads = true)")
+    for rel in find_files(root, lambda r: r.split("/")[-1] in ("app.json", "app.config.json")):
+        text = read(root, rel)
+        m = re.search(r'"NSAllowsArbitraryLoads"\s*:\s*true', text)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} switches App Transport Security off (NSAllowsArbitraryLoads: true)")
+    return None
+
+
+def r_ios011(root, git, cid):
+    for rel in find_files(root, lambda r: r.endswith((".swift", ".m", ".mm", ".h"))):
+        text = read(root, rel)
+        m = re.search(r"\bUIWebView\b", text)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} uses UIWebView, which App Review rejects")
+    return None
+
+
+def r_mob004(root, git, cid):
+    native_ios = find_files(root, lambda r: r.endswith(".pbxproj"))
+    if not native_ios:
+        return None                      # managed Expo and similar declare the manifest in app config: needs a helper
+    found = find_files(root, lambda r: r.endswith("PrivacyInfo.xcprivacy"))
+    if not found:
+        return ("FAIL", f"AUTO: the iOS project ({native_ios[0]}) has no PrivacyInfo.xcprivacy privacy manifest")
+    return None
+
+
+def r_plt011(root, git, cid):
+    for rel in find_files(root, lambda r: r.endswith((".rules",)) and "firestore" in r or r.endswith("storage.rules")):
+        text = read(root, rel)
+        m = re.search(r"allow\s+[\w, ]*\b(?:read|write)\b[\w, ]*:\s*if\s+(?:true\s*;|request\.time\s*<)", text)
+        if m:
+            return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start())} is in test mode: `{m.group(0).strip()[:60]}`")
+    return None
+
+
+def r_fbs005(root, git, cid):
+    for rel in find_files(root, lambda r: r.endswith("database.rules.json")):
+        text = read(root, rel)
+        try:
+            rules = json.loads(re.sub(r"^\s*//.*$", "", text, flags=re.M)).get("rules", {})
+        except ValueError:
+            continue
+        for key in (".read", ".write"):
+            if rules.get(key) is True or rules.get(key) == "true":
+                m = re.search(r'"' + re.escape(key) + r'"', text)
+                return ("FAIL", f"AUTO: {rel}:{line_of(text, m.start() if m else 0)} sets {key} to true for the whole database")
+    return None
+
+
 RULES = {"SUP-001": r_sup001, "SEC-050": r_lockfile, "OPS-005": r_ops005, "OPS-001": r_ci,
-         "MNT-007": r_mnt007, "REL-043": r_readme, "UX-016": r_seo}
+         "MNT-007": r_mnt007, "REL-043": r_readme, "UX-016": r_seo,
+         "AND-001": r_and001, "AND-002": r_and002, "AND-005": r_and005, "AND-010": r_and010, "AND-024": r_and024,
+         "IOS-001": r_ios001, "IOS-011": r_ios011, "MOB-004": r_mob004, "PLT-011": r_plt011, "FBS-005": r_fbs005}
 
 
 def settle(root: Path):

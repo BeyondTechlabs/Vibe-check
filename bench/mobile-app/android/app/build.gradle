@@ -1,0 +1,29 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "app.trailmate"
+    compileSdk 34
+    defaultConfig {
+        applicationId "app.trailmate"
+        minSdk 23
+        targetSdk 34
+    }
+    signingConfigs {
+        release {
+            storeFile file("trailmate-release.jks")
+            storePassword "hikeHard2024!"
+            keyAlias "trailmate"
+            keyPassword "hikeHard2024!"
+        }
+    }
+    buildTypes {
+        release {
+            debuggable true
+            signingConfig signingConfigs.release
+        }
+    }
+}

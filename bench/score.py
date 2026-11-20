@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Score a vibe-check hunt against the benchmark's answer key.
 
-Usage:  python3 bench/score.py <path to the audited copy's .vibe-check/ledger.md> [bench/hunt-answers.json]
+Usage:  python3 bench/score.py <path to the audited copy's .vibe-check/ledger.md> [bench/hunt-answers.json | bench/mobile-answers.json]
 
 A bug counts as found when a PROVEN hunt row (T-) or a FAIL row mentions the bug's file
 and at least one of its keywords. Prints recall (found / total) and what was missed.
@@ -33,6 +33,8 @@ def main() -> int:
         print(__doc__)
         return 2
     ledger = Path(sys.argv[1]).read_text("utf-8")
+    for part in sorted(Path(sys.argv[1]).parent.joinpath("ledger.d").glob("*.md")):
+        ledger += "\n" + part.read_text("utf-8")
     key = Path(sys.argv[2] if len(sys.argv) > 2 else Path(__file__).with_name("hunt-answers.json"))
     bugs = json.loads(key.read_text("utf-8"))["bugs"]
     found, missed = [], []
@@ -42,11 +44,11 @@ def main() -> int:
         stem = Path(base).name
         hit = next((k for k, txt in evidence if (base in txt or stem in txt) and any(w.lower() in txt for w in b["keywords"])), None)
         (found if hit else missed).append((b, hit))
-    print(f"Hunt benchmark: found {len(found)} of {len(bugs)} planted bugs ({100 * len(found) // len(bugs)}%)")
+    print(f"{json.loads(key.read_text('utf-8')).get('app', 'Hunt benchmark')}: found {len(found)} of {len(bugs)} planted bugs ({100 * len(found) // len(bugs)}%)")
     for b, hit in found:
         print(f"  ✅ {b['id']} {b['title']}  (ledger {hit})")
     for b, _ in missed:
-        print(f"  ❌ {b['id']} {b['title']}  [{b['method']}, {b['file']}]")
+        print(f"  ❌ {b['id']} {b['title']}  [{b.get('method') or b.get('check', '')}, {b['file']}]")
     return 0
 
 

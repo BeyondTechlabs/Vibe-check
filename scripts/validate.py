@@ -429,6 +429,21 @@ for _name, _txt, _musts in [("ledger.md", _led, ["`BUILDS: yes`", "`BUILDS: no`"
     for _m in _musts:
         if _m not in _txt: err(f"{_name} is missing '{_m}' (v3.8)")
 
+# 33. v3.9 mobile scripts: inventory, script-settled mobile checks, built-app reader, mobile build folders, mobile bench
+_inv = (SK / "scripts" / "inventory.py").read_text(); _auto = (SK / "scripts" / "autocheck.py").read_text()
+_scan = (SK / "scripts" / "appscan.py").read_text() if (SK / "scripts" / "appscan.py").exists() else ""
+for _m in ["android_components", "permissions", "deep_links", "webviews", "native_bridges", "firebase_rules", "def mobile_items("]:
+    if _m not in _inv: err(f"inventory.py is missing '{_m}' (v3.9)")
+for _m in ['"AND-001"', '"AND-002"', '"AND-005"', '"AND-010"', '"AND-024"', '"IOS-001"', '"IOS-011"', '"MOB-004"', '"PLT-011"', '"FBS-005"']:
+    if _m not in _auto: err(f"autocheck.py has no rule for {_m} (v3.9)")
+for _m in ["def decode_axml(", "plistlib", "SECRET_KINDS", "appscan.md"]:
+    if _m not in _scan: err(f"appscan.py is missing '{_m}' (v3.9)")
+if re.search(r"^\s*(import|from)\s+(requests|urllib|http|socket|subprocess)\b", _scan, re.M): err("appscan.py must only read the file: no network, no running anything")
+for _f in ["codemap.py", "inventory.py", "sweep.py", "profile.py", "versions.py", "autocheck.py"]:
+    if '".dart_tool"' not in (SK / "scripts" / _f).read_text(): err(f"{_f} doesn't skip mobile build folders (.dart_tool, DerivedData…) (v3.9)")
+if not (ROOT / "bench" / "mobile-answers.json").exists() or not (ROOT / "bench" / "mobile-app").is_dir(): err("bench/mobile-app and bench/mobile-answers.json are missing (v3.9)")
+if "appscan.py" not in (REFS / "mobile.md").read_text(): err("mobile.md must say when to use appscan.py (ask first) (v3.9)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -610,7 +625,7 @@ for must in ["npx skills update -g", "VIBE_CHECK_NO_UPDATE_CHECK", "## 🔄 Upda
 if re.search(r"phone home|nothing (?:is )?sent anywhere", readme, re.I) and "version check" not in readme.lower():
     err("README.md promises it never contacts anything, but doesn't mention the version check")
 
-for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "codemap.py", "autocheck.py", "test_scripts.py", "release.sh"]:
+for f in sorted(ref_files) + ["inventory.py", "sweep.py", "coverage.py", "version_check.py", "versions.py", "profile.py", "share_stats.py", "report_pdf.py", "codemap.py", "autocheck.py", "appscan.py", "test_scripts.py", "release.sh"]:
     if f not in readme: err(f"README.md repo layout doesn't list {f}")
 for link in re.findall(r"\]\((?!https?://|#|mailto:)([^)]+)\)", readme):
     if not (ROOT / link.split("#")[0]).exists(): err(f"README.md links to missing file: {link}")

@@ -18,3 +18,22 @@ Record the result in the table below with the vibe-check version, tool and model
 | Date | vibe-check | Tool and model | Found |
 |---|---|---|---|
 | | | | |
+
+# Mobile benchmark
+
+`mobile-app/` is a small Flutter app ("Trailmate") for Android and iOS on Firebase, with **20 planted mobile problems** across the Android, iOS, framework, Firebase and on-device checks: backups, a debuggable release, cleartext, an exported admin screen, a FileProvider sharing everything, a trust-all TrustManager, a WebView bridge, signing passwords, tokens in SharedPreferences and UserDefaults, a token in the log, ATS off, no privacy manifest, open Firestore and Storage rules, a callable function with no auth check, a staff check on a client-writable field, an unguarded deep link to an admin screen, sign-in inside a WebView, and a release build pointing at a developer machine.
+
+## Run it
+1. Copy the app somewhere the agent can't see the answers, as a git repo:
+   ```bash
+   cp -R bench/mobile-app /tmp/trailmate && cd /tmp/trailmate && git init -q && git add -A && git commit -qm init
+   ```
+2. Open `/tmp/trailmate` in your AI tool and say **"vibe check this app"** (a Full check). Say no to builds: it's not a buildable project.
+3. Score it:
+   ```bash
+   python3 bench/score.py /tmp/trailmate/.vibe-check/ledger.md bench/mobile-answers.json
+   ```
+
+| Date | vibe-check | Tool and model | Found |
+|---|---|---|---|
+| | | | |

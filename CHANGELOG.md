@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.9.0 (2026-11-20)
+
+**Mobile scripts, and a mobile test app to prove it.**
+- **Mobile inventory:** `inventory.py` now lists every Android activity, service, receiver and provider (exported or not, with its permission), every Android permission and iOS permission description, deep links, App Links, URL schemes and universal links, WebViews, native bridges, and Firebase rules paths. Each one needs a verdict, like web routes.
+- **Mobile checks settled by script:** `autocheck.py` now settles AND-001 (backups), AND-002 (debuggable release), AND-005 (FileProvider root), AND-010 (cleartext, user CAs), AND-024 (signing keys and passwords), IOS-001 (ATS off), IOS-011 (`UIWebView`), MOB-004 (no privacy manifest), PLT-011 (rules in test mode) and FBS-005 (open Realtime Database), but only when the files decide it for certain. Each is re-checked at every count, like the web ones.
+- **Reading a built app (asked first):** the new `appscan.py` opens an APK or IPA as an archive (nothing installed or run). It decodes the final merged Android manifest (including what libraries add) or the iOS Info.plist, flags backups, debuggable builds, cleartext, exported components without a permission, restricted permissions, ATS exceptions, a missing privacy manifest and `UIWebView`, and searches every file for secrets (masked) and test, staging or local server addresses.
+- **Mobile build folders are skipped everywhere** (`.dart_tool`, `DerivedData`, `Pods`, `.cxx`, `.symlinks`, `ephemeral`, `xcuserdata`…), so no helper reads generated files. The code map and inventory also read `.java`, `.gradle`, `.xml`, `.plist`, `.entitlements` and Objective-C files.
+- **Mobile benchmark:** `bench/mobile-app` ("Trailmate", Flutter on Android, iOS and Firebase) has 20 planted problems with an answer key (`bench/mobile-answers.json`). The scripts alone already settle 8 of them; `bench/score.py` scores a full run.
+
 ## v3.8.0 (2026-11-20)
 
 **Mobile apps, properly: 112 mobile checks in six parts, and vibe-check now fits teams' working rules.**

@@ -9,6 +9,7 @@ Usage: python3 tests/test_scripts.py   (exit code 1 on any failure)
 from __future__ import annotations
 
 import json
+import shutil
 import re
 import subprocess
 import sys
@@ -708,6 +709,60 @@ def main() -> int:
             check("ios" in mods, f"mobile: adding an iOS project should load ios.md: {sorted(mods)}")
             r = run("codemap.py", str(pm), "--module", "android")
             check(r.returncode == 0 and "AndroidManifest.xml" in r.stdout, f"mobile: the code map should have an android part:\n{r.stdout[:300]}")
+
+        # v3.9: the mobile test app: inventory, script-settled mobile checks, skipped build folders, scoring
+        bench = Path(__file__).resolve().parent.parent / "bench"
+        with tempfile.TemporaryDirectory() as tmpt:
+            tm = Path(tmpt) / "trailmate"
+            shutil.copytree(bench / "mobile-app", tm)
+            (tm / ".dart_tool" / "x").mkdir(parents=True)
+            (tm / ".dart_tool" / "x" / "leak.dart").write_text("final k = 'sk_live_" + "b" * 30 + "';\n")
+            git(tm, "init", "-q"); git(tm, "add", "-A"); git(tm, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+            run("inventory.py", str(tm))
+            items = json.loads((tm / ".vibe-check" / "inventory.json").read_text())["items"]
+            check(any("AdminActivity" in x and "exported=true" in x for x in items["android_components"]), f"mobile inventory: exported AdminActivity missing: {items['android_components']}")
+            check(any("/{document=**}" in x for x in items["firebase_rules"]) and items["webviews"] and items["deep_links"] is not None,
+                  "mobile inventory: Firebase rules paths and WebViews should be listed")
+            r = run("autocheck.py", str(tm))
+            auto = (tm / ".vibe-check" / "ledger.d" / "01-auto.md").read_text()
+            for cid in ("AND-001", "AND-002", "AND-005", "AND-010", "AND-024", "IOS-001", "MOB-004", "PLT-011"):
+                check(f"| {cid} | FAIL" in auto, f"mobile autocheck: {cid} should fail on the test app:\n{auto}")
+            (tm / ".vibe-check" / "ledger.md").write_text("# Ledger\n")
+            r = subprocess.run([sys.executable, str(bench / "score.py"), str(tm / ".vibe-check" / "ledger.md"), str(bench / "mobile-answers.json")],
+                               capture_output=True, text=True)
+            check(r.returncode == 0 and "found 8 of 20" in r.stdout, f"mobile bench: the scripts alone should find 8 of 20:\n{r.stdout}{r.stderr}")
+            run("codemap.py", str(tm))
+            check(".dart_tool" not in (tm / ".vibe-check" / "codemap.md").read_text(), "mobile: the code map must skip .dart_tool")
+            r = run("sweep.py", str(tm))
+            check("leak.dart" not in (tm / ".vibe-check" / "sweep.md").read_text(), "mobile: the sweep must skip .dart_tool")
+
+        # v3.9: appscan reads a built APK and IPA without running anything
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from axml_fixture import encode
+        import zipfile, plistlib
+        with tempfile.TemporaryDirectory() as tmpa:
+            pa = Path(tmpa)
+            m = encode([("start", "manifest", [("targetSdkVersion", "34")]),
+                        ("start", "uses-permission", [("name", "android.permission.QUERY_ALL_PACKAGES")]), ("end", "uses-permission", []),
+                        ("start", "application", [("allowBackup", True), ("debuggable", True)]),
+                        ("start", "activity", [("name", ".Admin"), ("exported", True)]), ("end", "activity", []),
+                        ("end", "application", []), ("end", "manifest", [])])
+            with zipfile.ZipFile(pa / "app.apk", "w") as z:
+                z.writestr("AndroidManifest.xml", m)
+                z.writestr("assets/index.android.bundle", 'fetch("https://staging.example.com/api"); const k="sk_live_' + "a" * 30 + '";')
+            r = run("appscan.py", str(pa / "app.apk"), str(pa))
+            rep = (pa / ".vibe-check" / "appscan.md").read_text()
+            check(r.returncode == 0 and "AND-001" in rep and "this build is debuggable" in rep and ".Admin" in rep and "QUERY_ALL_PACKAGES" in rep
+                  and "staging.example.com" in rep and "sk_l…" in rep and "a" * 30 not in rep, f"appscan: APK findings wrong:\n{rep[:900]}")
+            info = {"CFBundleIdentifier": "x", "CFBundleExecutable": "X", "NSAppTransportSecurity": {"NSAllowsArbitraryLoads": True},
+                    "NSCameraUsageDescription": "Scan"}
+            with zipfile.ZipFile(pa / "app.ipa", "w") as z:
+                z.writestr("Payload/X.app/Info.plist", plistlib.dumps(info, fmt=plistlib.FMT_BINARY))
+                z.writestr("Payload/X.app/X", b"\x00\x01UIWebView\x00")
+            r = run("appscan.py", str(pa / "app.ipa"), str(pa))
+            rep = (pa / ".vibe-check" / "appscan.md").read_text()
+            check(r.returncode == 0 and "IOS-001" in rep and "MOB-004" in rep and "IOS-011" in rep and "NSCameraUsageDescription" in rep,
+                  f"appscan: IPA findings wrong:\n{rep[:900]}")
 
         # v3.7 code map: every module part, and a helper can print just its own
         r = run("codemap.py", str(app))

@@ -20,12 +20,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SKIP_DIRS = {
+SKIP_DIRS = {".dart_tool", "DerivedData", ".cxx", ".externalNativeBuild", ".symlinks", "ephemeral", "xcuserdata", ".expo-shared", ".fvm", "Carthage", ".kotlin", "Pods", ".gradle", ".expo", 
     "node_modules", ".git", ".next", ".nuxt", ".svelte-kit", ".output", "dist", "build", "out", "coverage",
     ".vibe-check", "vendor", ".venv", "venv", "env", "__pycache__", ".turbo", ".vercel", ".netlify", ".expo",
     "Pods", "target", ".gradle", ".idea", ".cache", "storybook-static", ".wrangler",
 }
-EXT = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro", ".py", ".rb", ".php",
+EXT = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro", ".py", ".rb", ".php", ".java", ".kts", ".gradle",
+       ".xml", ".plist", ".entitlements", ".m", ".mm",
        ".go", ".dart", ".kt", ".swift", ".html", ".sql", ".prisma", ".rules", ".json", ".yaml", ".yml", ".toml")
 PUBLIC_PREFIX = re.compile(r"^(NEXT_PUBLIC_|VITE_|EXPO_PUBLIC_|REACT_APP_|PUBLIC_|NUXT_PUBLIC_|GATSBY_)")
 
@@ -47,6 +48,12 @@ CATEGORIES = {
     "email": "Email sending",
     "ai_calls": "AI / LLM calls",
     "third_party_scripts": "Third-party scripts and embeds",
+    "android_components": "Android activities, services, receivers and providers (exported or not)",
+    "permissions": "App permissions (Android and iOS)",
+    "deep_links": "Deep links, App Links, URL schemes and universal links",
+    "webviews": "WebViews",
+    "native_bridges": "Native bridges (JavaScript/Dart to native code)",
+    "firebase_rules": "Firebase rules: collections and storage paths",
 }
 # (category, regex on content, capture group or 0 for "file:line")
 CONTENT = [
@@ -91,6 +98,51 @@ def walk(root: Path):
                 yield rel, p
             elif fn.lower().endswith(EXT) and not fn.endswith((".min.js", "package-lock.json")):
                 yield rel, p
+
+
+ANDROID_TAG = re.compile(r"<(activity|activity-alias|service|receiver|provider)\b([^>]*)>", re.S)
+MOBILE_LINES = [
+    ("webviews", re.compile(r"\bWebView\b|WKWebView|UIWebView|react-native-webview|webview_flutter|InAppBrowser")),
+    ("native_bridges", re.compile(r"addJavascriptInterface|WKScriptMessageHandler|\bNativeModules\b|TurboModule|RCT_EXPORT_METHOD|"
+                                  r"@ReactMethod|MethodChannel|EventChannel|@CapacitorPlugin|@PluginMethod|CDVPlugin|registerPlugin\(")),
+    ("deep_links", re.compile(r"android:scheme=|android:autoVerify|CFBundleURLSchemes|applinks:|\bLinking\.(?:getInitialURL|addEventListener)|"
+                              r"\bprefixes\s*:\s*\[|uni_links|app_links|GoRouter\(|onOpenURL|continueUserActivity|\"scheme\"\s*:")),
+]
+
+
+def mobile_items(rel: str, text: str):
+    """(category, item) pairs for mobile apps: components, permissions, links, WebViews, bridges, Firebase rules."""
+    out = []
+    if rel.endswith("AndroidManifest.xml"):
+        for m in ANDROID_TAG.finditer(text):
+            attrs = m.group(2)
+            name = re.search(r'android:name="([^"]+)"', attrs)
+            exp = re.search(r'android:exported="(true|false)"', attrs)
+            perm = re.search(r'android:permission="([^"]+)"', attrs)
+            line = text.count("\n", 0, m.start()) + 1
+            state = f"exported={exp.group(1) if exp else 'unset'}" + (f", permission={perm.group(1)}" if perm else "")
+            out.append(("android_components", f"{m.group(1)} {name.group(1) if name else '?'} ({state})  ({rel}:{line})"))
+        for m in re.finditer(r'<uses-permission(?:-sdk-\d+)?\b[^>]*android:name="([^"]+)"', text):
+            out.append(("permissions", f"android {m.group(1)}  ({rel}:{text.count(chr(10), 0, m.start()) + 1})"))
+    if rel.endswith("Info.plist") or rel.endswith(("app.json", "app.config.js", "app.config.ts")):
+        for m in re.finditer(r"(NS\w+UsageDescription)", text):
+            out.append(("permissions", f"ios {m.group(1)}  ({rel}:{text.count(chr(10), 0, m.start()) + 1})"))
+    if rel.endswith(".entitlements"):
+        for m in re.finditer(r"applinks:([\w.-]+)", text):
+            out.append(("deep_links", f"universal link {m.group(1)}  ({rel})"))
+    if rel.endswith((".rules", "database.rules.json")):
+        for n, line in enumerate(text.splitlines(), 1):
+            for m in re.finditer(r"match\s+(/\S+)\s*\{", line):
+                if not re.match(r"^/(databases/\{\w+\}/documents|b/\{\w+\}/o)$", m.group(1)):
+                    out.append(("firebase_rules", f"{m.group(1)}  ({rel}:{n})"))
+    if not rel.endswith((".rules", ".json", ".plist", ".entitlements")):
+        for n, line in enumerate(text.splitlines(), 1):
+            if len(line) > 2000:
+                continue
+            for cat, rx in MOBILE_LINES:
+                if rx.search(line):
+                    out.append((cat, f"{rel}:{n}"))
+    return out
 
 
 def file_based(rel: str):
@@ -145,6 +197,8 @@ def main() -> int:
             continue
         scanned += 1
         for cat, item in file_based(rel):
+            found[cat].add(item)
+        for cat, item in mobile_items(rel, text):
             found[cat].add(item)
         if p.name.startswith(".env"):
             for k in re.findall(r"^\s*(?:export\s+)?([A-Z][A-Z0-9_]+)\s*=", text, re.M):

@@ -4,6 +4,10 @@ Load this file when the project contains a mobile app: native iOS or Android, Re
 
 **Also load, for each part the app has:** `android.md` (Android), `ios.md` (iOS), `mobile-frameworks.md` (React Native, Expo, Flutter, Capacitor, Ionic), `firebase.md` (Firebase backend) and always `mobile-data.md` (data left on the phone). Each part is a module of its own; ones the app doesn't use get one `N/A` row.
 
+**Already done for you by the scripts:** `inventory.py` lists every Android component (exported or not), permission, deep link, WebView, native bridge and Firebase rules path: each one needs a verdict. `autocheck.py` settles the mobile checks the files decide for certain (backups, debuggable releases, cleartext, FileProvider roots, signing passwords, ATS off, a missing privacy manifest, `UIWebView`, open Firebase rules); don't redo those rows.
+
+**A built app, if there is one:** the final app can differ from the source (libraries add permissions and components). If the user has a release APK or IPA, **ask first**, then run `python3 <skill-folder>/scripts/appscan.py <file> .`: it only reads the archive, and writes `.vibe-check/appscan.md` with the merged manifest or Info.plist findings, masked secrets and test or staging addresses left in the build. Use its findings as evidence (`appscan.md: …`).
+
 ## App store requirements
 - [ ] 🔴 MOB-001 **Account deletion inside the app** if the app lets people create accounts (Apple and Google both require it). The flow deletes server data too, not just the local session.
 - [ ] 🔴 MOB-002 **Permission purpose strings for every permission the app can trigger:** `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSMicrophoneUsageDescription`, `NSLocationWhenInUseUsageDescription` and so on, in clear words. A missing string makes iOS **crash** the app when that feature is used (for example "Take Photo" in a file picker on iPad).

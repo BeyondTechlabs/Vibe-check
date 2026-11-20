@@ -1,0 +1,243 @@
+{
+ "app": "Trailmate (Flutter, Android, iOS, Firebase)",
+ "note": "Planted mobile problems for vibe-check's mobile modules. Keep this file outside the copy of the app you audit.",
+ "bugs": [
+  {
+   "id": "M01",
+   "title": "Backups on with no backup rules",
+   "check": "AND-001",
+   "severity": "🔴",
+   "file": "android/app/src/main/AndroidManifest.xml",
+   "keywords": [
+    "allowbackup",
+    "backup"
+   ]
+  },
+  {
+   "id": "M02",
+   "title": "Release build is debuggable",
+   "check": "AND-002",
+   "severity": "🔴",
+   "file": "android/app/build.gradle",
+   "keywords": [
+    "debuggable"
+   ]
+  },
+  {
+   "id": "M03",
+   "title": "Cleartext allowed for every domain",
+   "check": "AND-010",
+   "severity": "🔴",
+   "file": "network_security_config.xml",
+   "keywords": [
+    "cleartext"
+   ]
+  },
+  {
+   "id": "M04",
+   "title": "Exported admin activity changes points with no check",
+   "check": "AND-003",
+   "severity": "🔴",
+   "file": "AdminActivity",
+   "keywords": [
+    "exported",
+    "permission",
+    "admin"
+   ]
+  },
+  {
+   "id": "M05",
+   "title": "FileProvider shares the whole storage root",
+   "check": "AND-005",
+   "severity": "🔴",
+   "file": "file_paths.xml",
+   "keywords": [
+    "root-path",
+    "root",
+    "fileprovider"
+   ]
+  },
+  {
+   "id": "M06",
+   "title": "Trust-all TrustManager",
+   "check": "AND-011",
+   "severity": "🔴",
+   "file": "UnsafeHttp.kt",
+   "keywords": [
+    "trust",
+    "certificate",
+    "tls"
+   ]
+  },
+  {
+   "id": "M07",
+   "title": "JavaScript bridge on a WebView that loads any URL",
+   "check": "AND-013",
+   "severity": "🔴",
+   "file": "HelpActivity.kt",
+   "keywords": [
+    "addjavascriptinterface",
+    "bridge",
+    "webview"
+   ]
+  },
+  {
+   "id": "M08",
+   "title": "Signing passwords in build.gradle",
+   "check": "AND-024",
+   "severity": "🔴",
+   "file": "android/app/build.gradle",
+   "keywords": [
+    "password",
+    "signing",
+    "keystore"
+   ]
+  },
+  {
+   "id": "M09",
+   "title": "Tokens in plain SharedPreferences",
+   "check": "AND-020",
+   "severity": "🔴",
+   "file": "TokenStore.kt",
+   "keywords": [
+    "sharedpreferences",
+    "token",
+    "keystore"
+   ]
+  },
+  {
+   "id": "M10",
+   "title": "Refresh token written to the log",
+   "check": "MDV-007",
+   "severity": "🔴",
+   "file": "TokenStore.kt",
+   "keywords": [
+    "log"
+   ]
+  },
+  {
+   "id": "M11",
+   "title": "App Transport Security switched off",
+   "check": "IOS-001",
+   "severity": "🔴",
+   "file": "ios/Runner/Info.plist",
+   "keywords": [
+    "nsallowsarbitraryloads",
+    "transport security",
+    "ats"
+   ]
+  },
+  {
+   "id": "M12",
+   "title": "No privacy manifest in the iOS project",
+   "check": "MOB-004",
+   "severity": "🔴",
+   "file": "project.pbxproj",
+   "keywords": [
+    "privacyinfo",
+    "privacy manifest"
+   ]
+  },
+  {
+   "id": "M13",
+   "title": "Refresh token in UserDefaults",
+   "check": "IOS-004",
+   "severity": "🔴",
+   "file": "TokenCache.swift",
+   "keywords": [
+    "userdefaults",
+    "keychain"
+   ]
+  },
+  {
+   "id": "M14",
+   "title": "Firestore rules in test mode",
+   "check": "PLT-011",
+   "severity": "🔴",
+   "file": "firestore.rules",
+   "keywords": [
+    "test mode",
+    "if true",
+    "open"
+   ]
+  },
+  {
+   "id": "M15",
+   "title": "Storage rules allow anyone to write",
+   "check": "FBS-004",
+   "severity": "🔴",
+   "file": "storage.rules",
+   "keywords": [
+    "write",
+    "public",
+    "anyone"
+   ]
+  },
+  {
+   "id": "M16",
+   "title": "Callable function adds points to anyone, no auth check",
+   "check": "FBS-009",
+   "severity": "🔴",
+   "file": "functions/index.js",
+   "keywords": [
+    "auth",
+    "any member",
+    "anyone",
+    "caller"
+   ]
+  },
+  {
+   "id": "M17",
+   "title": "Staff check reads a client-writable field and Remote Config",
+   "check": "FBS-003",
+   "severity": "🔴",
+   "file": "admin_gate.dart",
+   "keywords": [
+    "isstaff",
+    "claim",
+    "remote config",
+    "field"
+   ]
+  },
+  {
+   "id": "M18",
+   "title": "Deep link opens the rewards admin screen with no sign-in check",
+   "check": "MFW-010",
+   "severity": "🔴",
+   "file": "router.dart",
+   "keywords": [
+    "deep link",
+    "admin",
+    "guard",
+    "sign-in",
+    "auth"
+   ]
+  },
+  {
+   "id": "M19",
+   "title": "Google sign-in inside a WebView",
+   "check": "IOS-008",
+   "severity": "🔴",
+   "file": "login_screen.dart",
+   "keywords": [
+    "webview",
+    "sign-in",
+    "oauth",
+    "browser"
+   ]
+  },
+  {
+   "id": "M20",
+   "title": "Release build points at the developer's machine",
+   "check": "MFW-003",
+   "severity": "🔴",
+   "file": "config.dart",
+   "keywords": [
+    "10.0.2.2",
+    "local",
+    "dev server",
+    "emulator"
+   ]
+  }
+ ]
+}
