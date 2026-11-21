@@ -16,8 +16,9 @@ What it tests:
   api       a small burst on sign-in (LIVE-006, SEC-007), malformed input and unknown routes leaking errors (LIVE-007),
             CORS (SEC-037), security headers (SEC-046)
   webhooks  unsigned and wrongly signed payment webhooks are refused (FIN-003)
-  browser   the flows and pages in runtime.json in a real browser: steps work, no page errors or 5xx (LIVE-012),
-            pages fit a phone screen (LIVE-013), the test-mode payment flow completes (LIVE-014)
+  browser   the flows and pages in runtime.json in a real browser: steps work (LIVE-012, QA-003), no page or console
+            errors or 5xx (QA-016), pages fit a phone screen with 44px buttons (LIVE-013, UX-008), the test-mode payment
+            flow completes (LIVE-014), and an axe scan for unnamed controls and missing alt text (UX-001, UX-003)
 
 Safety, enforced here: production is never a target; bursts are small (12 requests); every request has a 10-second
 timeout; test account tokens live only in runtime.json (git-ignored) and are never printed. Python 3.8+, standard library.
@@ -204,6 +205,10 @@ def t_webhooks(cfg, res):
 BROWSER_JS = r"""
 import { chromium } from 'playwright';
 import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+let axePath = null;
+try { axePath = require.resolve('axe-core/axe.min.js'); } catch (e) {}
 const cfg = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const out = { flows: [], pages: [] };
 let browser;
@@ -235,12 +240,21 @@ for (const f of cfg.flows || []) {
 }
 for (const p of cfg.pages || ['/']) {
   const { ctx, page, errs } = await newPage(375, 812);
-  let overflow = false;
+  let overflow = false, small = 0, a11y = null, clickDivs = 0;
   try {
     await page.goto(base + p, { timeout: 15000 });
     overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    small = await page.evaluate(() => [...document.querySelectorAll('button, [role=button], input[type=submit], input[type=button], input[type=checkbox], input[type=radio]')]
+      .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44); }).length);
+    clickDivs = await page.evaluate(() => [...document.querySelectorAll('div, span, li, img')]
+      .filter(e => (e.onclick || e.hasAttribute('onclick')) && !e.getAttribute('role') && e.tabIndex < 0).length);
+    if (axePath) {
+      await page.addScriptTag({ path: axePath });
+      const r = await page.evaluate(() => axe.run(document, { runOnly: { type: 'rule', values: ['button-name', 'link-name', 'label', 'select-name', 'image-alt', 'input-image-alt', 'role-img-alt'] } }));
+      a11y = r.violations.map(v => ({ rule: v.id, n: v.nodes.length }));
+    }
   } catch (e) { errs.push('could not open: ' + String(e.message).split('\n')[0].slice(0, 120)); }
-  out.pages.push({ path: p, overflow, errors: errs });
+  out.pages.push({ path: p, overflow, small, clickDivs, a11y, errors: errs });
   await ctx.close();
 }
 await browser.close();
@@ -260,13 +274,35 @@ def t_browser(cfg, res, rt_dir):
         res.add("browser", ["LIVE-012"], "info", f"the browser run didn't finish: {p.stderr.strip()[:160]}"); return
     flows = [f for f in out["flows"] if not f["payment"]]
     pay = [f for f in out["flows"] if f["payment"]]
+    pages = out["pages"]
+    stuck = [f"{f['name']}: {f['failed']}" for f in flows if f["failed"]]
     broken = [f"{f['name']}: {f['failed'] or '; '.join(f['errors'][:2])}" for f in flows if f["failed"] or f["errors"]]
-    if flows:
-        res.add("flows", ["LIVE-012"], "fail" if broken else "pass",
+    if flows:   # a broken flow proves QA-003 failed; a pass can't prove every journey (verification email, reset) was in the plan
+        res.add("flows", ["LIVE-012", "QA-003"] if stuck else ["LIVE-012"], "fail" if broken else "pass",
                 f"{len(broken)} of {len(flows)} flows broke: {'; '.join(broken[:3])}" if broken else f"all {len(flows)} flows completed with no page errors or 5xx", broken)
-    over = [p_["path"] for p_ in out["pages"] if p_["overflow"]]
-    res.add("phone-width", ["LIVE-013"], "fail" if over else "pass",
-            f"wider than a phone screen (375px): {', '.join(over)}" if over else f"all {len(out['pages'])} pages fit a 375px phone screen")
+    errs = [f"{f['name']}: {e}" for f in out["flows"] for e in f["errors"]] + [f"{p_['path']}: {e}" for p_ in pages for e in p_["errors"]]
+    res.add("console-errors", ["QA-016"], "fail" if errs else "pass",
+            f"{len(errs)} page or console error(s): {'; '.join(errs[:3])}" if errs else
+            f"no page errors, console errors or 5xx on {len(pages)} page(s) and {len(out['flows'])} flow(s)", errs)
+    over = [p_["path"] for p_ in pages if p_["overflow"]]
+    small = [f"{p_['path']} ({p_['small']})" for p_ in pages if p_.get("small")]
+    if over or small:
+        res.add("phone-width", ["LIVE-013", "UX-008"], "fail",
+                "; ".join(x for x in (f"wider than a phone screen (375px): {', '.join(over)}" if over else "",
+                                     f"buttons smaller than 44px: {', '.join(small)}" if small else "") if x))
+    else:   # modals aren't opened, so UX-008 isn't settled by a pass
+        res.add("phone-width", ["LIVE-013"], "pass", f"all {len(pages)} pages fit a 375px phone screen with 44px buttons")
+    if any(p_.get("a11y") is not None for p_ in pages):
+        ctl = {"button-name", "link-name", "label", "select-name"}
+        alt = {"image-alt", "input-image-alt", "role-img-alt"}
+        bad_c = [f"{p_['path']}: {v['rule']} ({v['n']})" for p_ in pages for v in (p_.get("a11y") or []) if v["rule"] in ctl]
+        bad_c += [f"{p_['path']}: clickable non-controls ({p_['clickDivs']})" for p_ in pages if p_.get("clickDivs")]
+        bad_a = [f"{p_['path']}: {v['rule']} ({v['n']})" for p_ in pages for v in (p_.get("a11y") or []) if v["rule"] in alt]
+        res.add("a11y-controls", ["UX-001"], "fail" if bad_c else "pass",
+                f"controls without a name or label, or clickable non-controls: {'; '.join(bad_c[:4])}" if bad_c else
+                f"every button, link and input has a name or label, and no clickable divs, on {len(pages)} page(s) (axe)", bad_c)
+        res.add("a11y-alt-text", ["UX-003"], "fail" if bad_a else "pass",
+                f"images without alt text: {'; '.join(bad_a[:4])}" if bad_a else f"every image has alt text on {len(pages)} page(s) (axe)", bad_a)
     if pay:
         pb = [f"{f['name']}: {f['failed'] or '; '.join(f['errors'][:2])}" for f in pay if f["failed"] or f["errors"]]
         res.add("payment-flow", ["LIVE-014"], "fail" if pb else "pass",
@@ -323,7 +359,8 @@ def setup_browser(rt_dir):
     rt_dir.mkdir(parents=True, exist_ok=True)
     if not (rt_dir / "package.json").exists():
         (rt_dir / "package.json").write_text('{"name": "vibe-check-runtime", "private": true, "type": "module"}\n', "utf-8")
-    r1 = subprocess.run(["npm", "install", "--prefix", str(rt_dir), "--no-save", "--no-audit", "--no-fund", "playwright@1"], capture_output=True, text=True, timeout=900)
+    r1 = subprocess.run(["npm", "install", "--prefix", str(rt_dir), "--no-save", "--no-audit", "--no-fund", "playwright@1", "axe-core@4"],
+                        capture_output=True, text=True, timeout=900)
     if r1.returncode != 0:
         print("Playwright install failed:", r1.stderr.strip()[-300:]); return 1
     r2 = subprocess.run([str(rt_dir / "node_modules" / ".bin" / "playwright"), "install", "chromium"], capture_output=True, text=True, timeout=1800)

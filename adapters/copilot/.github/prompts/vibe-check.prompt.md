@@ -75,7 +75,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 7. **Mask secrets:** first 4 characters and where (`sk_l…` in `src/lib/stripe.ts:3`).
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in the **fixing** section below.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
-10. **Fresh evidence every run.** Earlier findings are hints only: **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps unchanged checks (re-proved at every count); skip it for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
+10. **Fresh evidence every run.** Earlier findings are hints only (one line each in `.vibe-check/redo.md`; never read old ledgers or reports): **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps unchanged checks (re-proved at every count); skip it for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
 11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
 12. **No facts from memory.** Legal, regulatory, platform-policy and pricing statements come from this skill's reference files or a source you opened during this run (give the URL), never from memory. If unsure, make it a question for the user or the lawyer list.
 15. **Never go quiet.** Post a short line when each step or helper starts and finishes, and every couple of minutes during long work. Time-limit long commands.
@@ -110,7 +110,7 @@ Never retry or look the version up another way; if the check can't finish in 3 s
 
 ## Step 1: Profile the app
 
-**The code decides the profile, not the answers.** First run `python3 <skill-folder>/scripts/profile.py .`: it searches the code, schema, forms and config for evidence behind each question below (date-of-birth or age fields, school or student data, payment SDKs and payment links, health, bank or ID data, AI calls, chat, mobile, languages…) and writes `.vibe-check/profile.md`. Then show the user what the code shows (*"I see a `dob` field in `app/signup/page.tsx:2` and a Razorpay link in `lib/pricing.ts:2`"*) and ask **only** what the code can't tell you, in one short message.
+**The code decides the profile, not the answers.** First run `python3 <skill-folder>/scripts/profile.py .`: it searches the code, schema, forms and config for evidence behind each question below (date-of-birth or age fields, school or student data, payment SDKs and payment links, health, bank or ID data, AI calls, chat, mobile, languages…) and writes `.vibe-check/profile.md`. Then show the user what the code shows (*"I see a `dob` field in `app/signup/page.tsx:2`"*) and ask **only** what the code can't tell you, in one short message.
 
 **An answer can add to the profile but never remove what the code shows.** If the user says "no payments" or "no children" but `.vibe-check/profile.md` lists evidence, the module still runs, and the report says so under **Your answers vs your code**. A module with evidence can only be skipped by proving the code is unused (`N/A` with `DEAD CODE:` and the proof, for example "no file imports it"); `coverage.py` enforces this.
 
@@ -124,7 +124,7 @@ The questions (answer from the code first, then ask only what's left, as choices
 6. **Can it run for testing?** Locally, or on a staging or preview URL? (Running it is asked separately; never production.)
 7. **What kind of product?** Web app, mobile app, desktop app, browser extension, API or SDK. Can users post, chat or trade with each other? Does it support several languages? Does an AI agent take actions, or is it an MCP server? Which cloud does it run on?
 
-Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time and cost**: *Full (Recommended): every check that applies, about 20–60 minutes by size, a large share of a session* · *Quick: blind spots and blockers, about 10–15 minutes, much lighter*. "Re-check" after fixes is Full with `--carry` (only fixed, failed and changed items redone). Never downgrade on your own.
+Then the **level**. If the user named one, use it ("launch" means Full). Otherwise **ask, as a choice, with the time and cost**: *Full (Recommended): every check that applies, 20–60 minutes, a large share of a session* · *Quick: blind spots and blockers, about 10–15 minutes, much lighter*. "Re-check" after fixes is Full with `--carry` (only fixed, failed and changed items redone). Never downgrade on your own. If `profile.py` printed `LEVEL ADVICE`, say it, even when the user named Quick.
 
 | Level | When | Covers |
 |---|---|---|
@@ -168,7 +168,7 @@ Then write down:
 
 ## Step 4: Run the modules (one at a time, into the ledger)
 
-**Read the **ledger** section below now**: the ledger format, every row type, the *Tools run* table and the fallback for each missing tool. In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (last resort: after the code, the database read-only, and a question). Profile modules the profile rules out are never opened: one `N/A` row each.
+**Read the **ledger** section below now** (format, row types, *Tools run*, fallbacks). In short: create `.vibe-check/ledger.md`; one row per check ID, `PASS`, `FAIL 🔬 Confirmed` / `FAIL 🔎 Likely`, `N/A` or `CAN'T TELL`, each with its own evidence; `INV-`, `H-` and `V-` rows for the inventory, every sweep hit and every component; ranges and `*` only for N/A, and core modules never N/A as a whole. `CAN'T TELL` starts with `ASK:` (a question) or `CHECK:` (last resort: after the code, the database read-only, and a question). Profile modules the profile rules out are never opened: one `N/A` row each.
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, write its rows immediately. On a big app, resume with `coverage.py --remaining` rather than getting shallower.
 - **Evidence is checked:** `coverage.py` re-opens every cited `file:line` and quoted line. Re-read before you quote.
@@ -243,9 +243,9 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 ## Step 5: Report
 
 **Read the **reporting** section below now and follow it.** In short:
-0. **Ask only the questions that matter** (🔴/🟡, most serious first, up to 15), as choices; list the rest under *❓ Questions for you*.
-1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, Score N/100 and band, *Since last check*, totals, area scorecard), coverage and Standards tables (mapping in the **standards** section below; a coverage view, never a certification). Never type a number.
-2. Write the full report in the format of the **report-template** section below: ❌ blockers with evidence, recipe, safe to auto-fix and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
+0. **Ask only the questions that matter** (🔴/🟡, most serious first, up to 15), as choices; paste the rest from `coverage.py --question-list` under *❓ Questions for you*.
+1. Run `coverage.py` until it prints `COMPLETE`, and **paste** its Result block (verdict, score, *Since last check*, totals, areas), coverage and Standards tables (mapping in the **standards** section below; a coverage view, never a certification). Never type a number.
+2. Write the full report in the format of the **report-template** section below: ❌ blockers with evidence, recipe and a fix prompt; ⚠️ items; ❓ questions; needs a lawyer; what passed; coverage; not checked; the score card.
 3. Save it to `.vibe-check/reports/YYYY-MM-DD.md` with the ledger next to it, make sure `.vibe-check/` is gitignored, then run `coverage.py --verify-report <report>` until it prints `REPORT VERIFIED`, `coverage.py --save`, and `report_pdf.py <report>` (the branded PDF).
 4. **Hand over the report and PDF** (see the **reporting** section below). In the chat, show the one-screen summary (also saved as `.vibe-check/summary.md`), ask the ❓ questions as choices, then offer the next step as a choice.
 
@@ -480,7 +480,7 @@ Mark each item PASS / FAIL / N/A / CAN'T TELL, with evidence. 🔴 blocks launch
 ### Transport, headers and crypto
 
 - [ ] 🔴 SEC-040 **HTTPS everywhere**, with HTTP redirected to HTTPS and HSTS on.
-- [ ] 🔴 SEC-041 **Passwords hashed** with argon2id or bcrypt (salted automatically). Never encrypted, plain text, MD5 or SHA-*.
+- [ ] 🔴 SEC-041 **Passwords hashed** with a slow, salted password hash: argon2id, bcrypt, scrypt, or PBKDF2 with a high iteration count. Never encrypted, plain text, MD5 or a single SHA-* round. A slow hash below current guidance passes here and fails SEC-092.
 - [ ] 🟡 SEC-042 **Hashing vs encryption.** Hashing for things you only verify (passwords, tokens); encryption for things you need back (keys for third-party accounts and similar).
 - [ ] 🔴 SEC-043 **Encryption at rest** for the DB, file storage and backups (check the provider's setting; most managed DBs and storage encrypt by default, so confirm it). 🔴 for apps with children's, health, financial or ID data; 🟡 otherwise.
 - [ ] 🔴 SEC-044 **Field-level encryption for very sensitive data** (government IDs, health records, bank details, stored OAuth or API tokens of users), with keys kept outside the DB. N/A if the app stores none.
@@ -544,6 +544,7 @@ Check how data could reach someone who shouldn't see it, even when access contro
 - [ ] 🟡 SEC-089 **bcrypt's 72-byte limit is handled:** bcrypt ignores everything after 72 bytes, so it's never used on joined values (username + password cache keys caused an Okta login bypass for long usernames in 2024), and very long passwords are either refused with a stated limit or handled by a library that pre-hashes safely (or Argon2id is used).
 - [ ] 🟡 SEC-090 **Encryption is authenticated:** data the app encrypts itself uses AES-GCM, ChaCha20-Poly1305 or a library such as libsodium or Tink. No ECB, no CBC without a MAC (padding-oracle attacks), no reused nonces, no home-made crypto, and every decryption failure returns the same error.
 - [ ] 🟡 SEC-091 **Security events reach a human:** alerts for spikes in failed logins or password resets, 2FA or email changes on admin accounts, new admins or role changes, new API keys, rate limits tripping and admin sign-ins from a new country. Logging them without anyone being told doesn't count.
+- [ ] 🟡 SEC-092 **Password hashing strength meets current guidance:** argon2id (19 MiB, 2 passes or more), bcrypt cost 10 or more, scrypt N=2^17, or PBKDF2-HMAC-SHA256 with 600,000 iterations or more (OWASP Password Storage Cheat Sheet). Where the platform caps iterations (Cloudflare Workers allows 100,000), add a server-side pepper secret and rehash on next sign-in.
 
 <a id="reliability"></a>
 
@@ -1176,7 +1177,7 @@ Load this file for every Full and Enterprise check. AI-built apps often work but
 - [ ] 🟢 MNT-006 **Consistent structure and naming** that a new developer can guess (where routes, components, server code and tests live).
 
 ### Documentation
-- [ ] 🔴 MNT-007 **README explains how to run it:** install, required env vars (with an `.env.example` listing every variable and what it's for, no real values), how to run locally, run tests, and deploy.
+- [ ] 🟡 MNT-007 **README explains how to run it:** install, required env vars (with an `.env.example` listing every variable and what it's for, no real values), how to run locally, run tests, and deploy.
 - [ ] 🟡 MNT-008 **Architecture notes:** a short page or diagram showing the main parts (frontend, API, database, storage, third-party services) and how data flows.
 - [ ] 🟡 MNT-009 **Project rules for AI tools** (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules`): stack, conventions, "never do" rules, and how to test, so future AI sessions don't drift.
 - [ ] 🟡 MNT-010 **Database schema is documented** through migrations and a short description of the main tables and relationships.
@@ -1808,7 +1809,7 @@ Load this file when the app can run locally or the user has a **staging or previ
 
 The tests are scripted, so results are the same every run and cost few tokens: the model fills in a plan and reads a summary.
 
-1. **Ask once, as a choice** (the rules below). For each yes write it in `.vibe-check/answers.md`: `RUNTIME: yes`; and `RUNTIME: playwright: yes` if the user also agrees to install Playwright and Chromium for browser flows (about 300–500 MB, into `.vibe-check/runtime/`, never the project's `package.json`; if Chromium can't be downloaded, an installed Google Chrome is used). A staging host needs its own line: `RUNTIME: target staging.example.com: yes`. Production is refused by the script.
+1. **Ask once, as a choice** (the rules below). For each yes write it in `.vibe-check/answers.md`: `RUNTIME: yes`; and `RUNTIME: playwright: yes` if the user also agrees to install Playwright and Chromium for browser flows (with axe-core for the accessibility scan, about 300–500 MB, into `.vibe-check/runtime/`, never the project's `package.json`; if Chromium can't be downloaded, an installed Google Chrome is used). A staging host needs its own line: `RUNTIME: target staging.example.com: yes`. Production is refused by the script.
 2. **Start the app locally** (the user's `BUILDS: yes` covers `npm run dev` and similar). If preview and production share a database, set up the safe test copy first (next section).
 3. **Plan:** `python3 <skill-folder>/scripts/runtime.py . --plan` writes `.vibe-check/runtime/runtime.json` from the inventory. Fill it in from the code:
    - `base_url`;
@@ -1821,7 +1822,7 @@ The tests are scripted, so results are the same every run and cost few tokens: t
 5. **Use the results as evidence**, copied exactly: `| LIVE-002 | FAIL 🔬 Confirmed | RUN: runtime:authz-other-users → 1 case(s) where user B reached user A's data: … |`. `coverage.py` checks each against the saved result, its check, its verdict, its age and the user's `RUNTIME: yes`; a `CHECK: the running app → …` row is refused once the app was tested.
 6. **Clean up:** delete the test accounts and test data you created.
 
-`runtime.py` settles LIVE-002, LIVE-003, LIVE-004 and SEC-015 (who can reach what), SEC-055 (sensitive fields in responses), LIVE-006 and SEC-007 (rate limits), LIVE-007 (error leaks), SEC-037 (CORS), SEC-046 (headers), FIN-003 (webhook signatures), and LIVE-012 to LIVE-014 (browser flows, phone width, test payment). Uploads (LIVE-008), hunt proofs (LIVE-005) and the scanners (LIVE-009, LIVE-010) are still run by hand, with the same rules.
+`runtime.py` settles LIVE-002, LIVE-003, LIVE-004 and SEC-015 (who can reach what), SEC-055 (sensitive fields in responses), LIVE-006 and SEC-007 (rate limits), LIVE-007 (error leaks), SEC-037 (CORS), SEC-046 (headers), FIN-003 (webhook signatures), and in the browser LIVE-012 to LIVE-014 (flows, phone width, test payment), QA-016 (page and console errors), UX-001 and UX-003 (an axe scan for unnamed controls, clickable divs and missing alt text), and, when they fail, QA-003 (a journey broke) and UX-008 (overflow or buttons under 44px; a pass leaves UX-008 open, since modals aren't opened). Keyboard and screen-reader use (UX-002, LAW-005) still need a person. Uploads (LIVE-008), hunt proofs (LIVE-005) and the scanners (LIVE-009, LIVE-010) are still run by hand, with the same rules.
 
 ### When preview and production share one database
 
@@ -1861,7 +1862,8 @@ Read this at Step 5, before writing the report. The exact layouts are in the **r
 
 When every module is checked, collect the `CAN'T TELL` rows that start with `ASK:`, then **ask only the ones that matter**:
 - **Ask:** questions on 🔴 and 🟡 checks, and questions whose answer changes which modules apply (children, payments, health data, EU users…). Most serious first, **at most 15 in all**, 4 per round, *Skip the rest* always allowed.
-- **Don't ask, list:** 🟢 questions and anything past 15 go straight into the report under *❓ Questions for you*, where the user can answer later. `--verify-report` refuses a report that drops one.
+- **Don't ask, list:** 🟢 questions and anything past 15 go straight into the report under *❓ Questions for you*, where the user can answer later. Paste that section from `coverage.py --question-list`: one line per question, and questions that wait on the same file that isn't written yet grouped into one line (*Waiting on code that isn't written yet: `lib/screens.dart` (40 checks)*). Never ask those one by one. `--verify-report` refuses a report that drops one.
+- **EU users, once:** if an EU-only 🔴 check failed (marked *(blocker for EU users)*) and the code doesn't show where users are, ask once: *Do you have users in the EU, EEA or UK?* · *Yes* · *No* · *Not sure*. Record `EU: yes` or `EU: no` in `.vibe-check/answers.md`; with `EU: no` those checks count as should-fix. `--verify-report` refuses a report while one is open and unasked.
 - **Never ask what the files can answer** (the email provider, the analytics tool, the region: read the code and config). Legal judgement calls go on the *Questions for a lawyer* list, and store-listing preparation becomes a checklist for the user, not questions.
 
 Tell the user how many and roughly how long (*"9 quick questions, about 2 minutes: they change your score"*), then ask them **as choices** (see *Asking the user* in SKILL.md). Record each answer in `.vibe-check/answers.md` as `| ID | question | answer |` (or `skipped`), then act on it:
@@ -2021,9 +2023,13 @@ Checks redone: 92 · carried over: 143 · settled by script: 6 *(the line `cover
 
 ### ❓ Questions for you
 
-Only the `ASK:` questions the user skipped (the rest were asked before this report and are already counted). Answer any time: "answer question 2".
+*(Paste the list from `coverage.py --question-list`: one line per question, and questions waiting on the same unwritten file grouped into one line. Never type it by hand.)*
 
-1. <Example: "Should every technician see every client, or only clients they visit?">
+<N> open questions. Answer any time: "answer question 2".
+
+**Waiting on code that isn't written yet: `<file>` (<N> checks).** They're checked again once it exists: <IDs>.
+
+1. **<ID>** <check name>: <Example: "Should every technician see every client, or only clients they visit?"> *(skipped)*
 
 ### 🖥️ Check these yourself
 
@@ -2128,7 +2134,7 @@ Only the `ASK:` questions the user skipped (the rest were asked before this repo
 | OWASP API Security Top 10 (2023) | | | | | |
 | OWASP Top 10 for LLM Applications (2025) | | | | | |
 | OWASP Mobile Top 10 (2024) | | | | | |
-| OWASP ASVS 5.0.0 (by chapter) | | | | | |
+| OWASP ASVS 5.0.1 (by chapter) | | | | | |
 | 2025 CWE Top 25 | | | | | |
 
 ### Not checked
@@ -2175,7 +2181,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -2190,7 +2196,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2774,7 +2780,7 @@ Add a non-root user (`RUN adduser -D app` / `USER app`, or the image's built-in 
 Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wrong), **Verify** (how to prove it, then re-run the check ID).
 
 #### Sign-in, sessions and password storage
-**Covers:** SEC-001, SEC-002, SEC-004, SEC-005, SEC-006, SEC-041, ENT-001, ENT-003
+**Covers:** SEC-001, SEC-002, SEC-004, SEC-005, SEC-006, SEC-041, SEC-092, ENT-001, ENT-003
 **Safe fix:** use the auth the stack already has (Supabase Auth, Clerk, Auth.js, Firebase Auth, Django/Rails/Laravel built-ins) instead of hand-written login. Passwords are hashed with Argon2id or bcrypt by that library. JWTs are verified with the library's verify call (signature, `exp`, `iss`, `aud`, fixed algorithm). Reset and magic links are single-use, short-lived, hashed at rest and invalidated after a password change. Email is verified before it unlocks anything sensitive. Enterprise SSO and MFA use the provider's built-in options.
 **Trap:** `jwt.decode` instead of `verify`; reset tokens stored in plain text or reusable; "logout" that only deletes the cookie while the session stays valid on the server.
 **Verify:** a tampered or expired token is refused; a used reset link fails the second time; after logout, the old session cookie gets 401.
@@ -3328,7 +3334,7 @@ Sources (checked 2026-11-14): OWASP Top 10:2025 (top10.owasp.org), OWASP API Sec
 | A01:2025 | Broken Access Control | BS-01, BS-02, SEC-014, SEC-015, SEC-016, SEC-017, SEC-019, SEC-020, SEC-034, SEC-059, SEC-075, SEC-076, PLT-004, PLT-011, HUNT-004, LIVE-002, LIVE-003, LIVE-004, SEC-084, SEC-087 |
 | A02:2025 | Security Misconfiguration | BS-11, SEC-037, SEC-046, SEC-061, SEC-079, SEC-080, PLT-043, PLT-044, OPS-041, VUL-012 |
 | A03:2025 | Software Supply Chain Failures | BS-09, BS-19, SEC-048, SEC-049, SUP-001, SUP-002, SUP-003, SUP-006, SUP-007, SUP-008, SUP-014, VUL-005, VUL-006, VUL-007, VUL-008, VUL-013 |
-| A04:2025 | Cryptographic Failures | SEC-040, SEC-041, SEC-042, SEC-043, SEC-044, SEC-045, SEC-047, SEC-072, SEC-089, SEC-090 |
+| A04:2025 | Cryptographic Failures | SEC-040, SEC-041, SEC-042, SEC-043, SEC-044, SEC-045, SEC-047, SEC-072, SEC-089, SEC-090, SEC-092 |
 | A05:2025 | Injection | BS-04, SEC-027, SEC-028, SEC-029, SEC-030, SEC-031, SEC-065, SEC-066, SEC-068, AIF-009 |
 | A06:2025 | Insecure Design | BS-06, BS-08, HUNT-001, HUNT-002, HUNT-003, HUNT-005, SEC-053, SEC-071, REL-044 |
 | A07:2025 | Authentication Failures | SEC-001, SEC-002, SEC-004, SEC-005, SEC-006, SEC-007, SEC-009, SEC-010, SEC-011, SEC-056, SEC-071, SEC-073, SEC-086, SEC-088, SEC-089 |

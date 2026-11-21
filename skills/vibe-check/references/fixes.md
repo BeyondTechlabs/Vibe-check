@@ -374,7 +374,7 @@ Add a non-root user (`RUN adduser -D app` / `USER app`, or the image's built-in 
 Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wrong), **Verify** (how to prove it, then re-run the check ID).
 
 ### Sign-in, sessions and password storage
-**Covers:** SEC-001, SEC-002, SEC-004, SEC-005, SEC-006, SEC-041, ENT-001, ENT-003
+**Covers:** SEC-001, SEC-002, SEC-004, SEC-005, SEC-006, SEC-041, SEC-092, ENT-001, ENT-003
 **Safe fix:** use the auth the stack already has (Supabase Auth, Clerk, Auth.js, Firebase Auth, Django/Rails/Laravel built-ins) instead of hand-written login. Passwords are hashed with Argon2id or bcrypt by that library. JWTs are verified with the library's verify call (signature, `exp`, `iss`, `aud`, fixed algorithm). Reset and magic links are single-use, short-lived, hashed at rest and invalidated after a password change. Email is verified before it unlocks anything sensitive. Enterprise SSO and MFA use the provider's built-in options.
 **Trap:** `jwt.decode` instead of `verify`; reset tokens stored in plain text or reusable; "logout" that only deletes the cookie while the session stays valid on the server.
 **Verify:** a tampered or expired token is refused; a used reset link fails the second time; after logout, the old session cookie gets 401.

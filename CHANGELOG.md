@@ -1,5 +1,25 @@
 # Changelog
 
+## v5.0.1 (2026-11-21)
+
+**Fixes from two real reports (The Art Club and Trailmate): fewer questions, fairer blockers, cleaner PDFs, cheaper re-checks.**
+- **The right version and level:**
+  - `--verify-report` refuses a report whose header names a different vibe-check version than the one installed (a session still following older instructions) and says to start a new session.
+  - `profile.py` prints `LEVEL ADVICE: Full` when the code shows children or payments, since a Quick check skips those modules; the level question says so, even when Quick was asked for.
+- **Fewer, clearer questions:**
+  - New `coverage.py --question-list` writes the report's *Questions for you*: one line per question, and questions that wait on the same file that isn't written yet grouped into one line (*Waiting on code that isn't written yet: `lib/screens.dart` (40 checks)*). The report is refused without the grouped line.
+  - EU-only blockers (like Google Fonts) ask once whether there are users in the EU, EEA or UK; `EU: no` makes them should-fix. The report is refused while one is open and unasked.
+- **Fairer severity:** MNT-007 (README and example settings file) is now should-fix. SEC-041 accepts any slow, salted password hash, PBKDF2 included; new 🟡 SEC-092 checks the strength against OWASP guidance (PBKDF2-SHA256 600,000 iterations; a pepper where the platform caps it).
+- **Cheaper re-checks:** a saved run keeps each failure and open question as a one-line hint. `--carry` puts them in `redo.md` and `--brief` shows them under each check, so the old ledger is never read into the conversation.
+- **Report checks:** a section that appears twice is refused.
+- **Cleaner PDFs:**
+  - a `|` inside code or escaped as `\|` no longer splits a table cell;
+  - text in the appendix is cut at a word with "…", never leaving code or bold open, and check names no longer stop mid-word;
+  - empty tables, empty sections and columns nobody filled in (like Confidence) are left out;
+  - stray spaces before commas and colons are removed, and ◐ is drawn.
+- **More checks settled by the browser tests:** QA-016 (page and console errors), UX-001 and UX-003 through an axe accessibility scan (unnamed controls, clickable divs, missing alt text), and, when they fail, QA-003 (a journey broke) and UX-008 (overflow or buttons under 44px). Playwright setup now installs axe-core with it.
+- **Tests:** a report from older instructions, a duplicate section, three questions waiting on one missing file, an EU-only blocker before and after `EU: no`, the Art Club table, hints in `redo.md` and `--brief`, and axe finding a missing alt text, an unnamed button and a clickable div.
+
 ## v5.0.0 (2026-11-21)
 
 **Runtime tests: vibe-check can now test your running app, not only read its code, after you say yes.**

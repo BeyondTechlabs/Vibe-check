@@ -1,7 +1,7 @@
 """A tiny local web app with planted runtime problems, for testing runtime.py. Standard library only.
 
 Planted: user B can read user A's order (IDOR) and the response leaks a password hash; any signed-in user reaches the
-admin route; sign-in has no rate limit; /broken throws a page error; /wide overflows a phone screen; malformed JSON returns a Python traceback; CORS trusts any origin with
+admin route; sign-in has no rate limit; /broken throws a page error; /wide overflows a phone screen; /a11y has an image without alt text, an unnamed small button and a clickable div; malformed JSON returns a Python traceback; CORS trusts any origin with
 credentials; no security headers; the payment webhook accepts unsigned events.
 """
 import json
@@ -37,6 +37,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, "<html><body>Cart<script>window.addEventListener('load', () => { null.total })</script></body></html>", "text/html")
         if self.path == "/wide":
             return self.send(200, '<html><head><meta name="viewport" content="width=device-width"></head><body><div style="width:900px">Wide table</div></body></html>', "text/html")
+        if self.path == "/a11y":
+            return self.send(200, '<html><head><meta name="viewport" content="width=device-width"></head><body><img src="/x.png">'
+                             '<button style="width:30px;height:30px"></button><div onclick="go()">Buy</div></body></html>', "text/html")
         if self.path == "/pay":
             return self.send(200, "<html><body><button id=pay onclick=\"location.href='/paid'\">Pay</button></body></html>", "text/html")
         if self.path == "/paid":

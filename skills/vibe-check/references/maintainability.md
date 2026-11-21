@@ -11,7 +11,7 @@ Load this file for every Full and Enterprise check. AI-built apps often work but
 - [ ] 🟢 MNT-006 **Consistent structure and naming** that a new developer can guess (where routes, components, server code and tests live).
 
 ## Documentation
-- [ ] 🔴 MNT-007 **README explains how to run it:** install, required env vars (with an `.env.example` listing every variable and what it's for, no real values), how to run locally, run tests, and deploy.
+- [ ] 🟡 MNT-007 **README explains how to run it:** install, required env vars (with an `.env.example` listing every variable and what it's for, no real values), how to run locally, run tests, and deploy.
 - [ ] 🟡 MNT-008 **Architecture notes:** a short page or diagram showing the main parts (frontend, API, database, storage, third-party services) and how data flows.
 - [ ] 🟡 MNT-009 **Project rules for AI tools** (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules`): stack, conventions, "never do" rules, and how to test, so future AI sessions don't drift.
 - [ ] 🟡 MNT-010 **Database schema is documented** through migrations and a short description of the main tables and relationships.

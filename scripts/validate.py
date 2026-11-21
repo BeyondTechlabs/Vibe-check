@@ -486,6 +486,19 @@ for _m in ["runtime.py", "RUNTIME: yes", "LIVE-012", "LIVE-013", "LIVE-014", "Cl
     if _m not in _lt: err(f"live-tests.md is missing '{_m}' (v5.0)")
 if "runtime.py" not in skill_main: err("SKILL.md must point to scripts/runtime.py (v5.0)")
 
+# 37. v5.0.1 fixes from real reports
+for _m in ["start a new session", "appear twice", "def question_groups(", "--question-list", "Waiting on code that isn't written yet",
+           "EU_ANSWER", "nobody asked", "def md_short(", "\"hints\"", "Last run's result"]:
+    if _m not in _cov: err(f"coverage.py is missing '{_m}' (v5.0.1)")
+_pdf = (SK / "scripts" / "report_pdf.py").read_text()
+for _m in ["def split_row(", "def tidy(", "drop a column nobody filled in"]:
+    if _m not in _pdf: err(f"report_pdf.py is missing '{_m}' (v5.0.1)")
+if "LEVEL ADVICE" not in (SK / "scripts" / "profile.py").read_text() or "LEVEL ADVICE" not in skill_main:
+    err("profile.py must print LEVEL ADVICE and SKILL.md must say to pass it on (v5.0.1)")
+for _m in ["QA-016", "UX-001", "UX-003", "axe-core"]:
+    if _m not in _rt: err(f"runtime.py is missing '{_m}' (v5.0.1)")
+if "EU: yes" not in (REFS / "reporting.md").read_text(): err("reporting.md must say to ask about EU users once (v5.0.1)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")

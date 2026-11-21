@@ -27,6 +27,7 @@ Usage:
     --remaining  list what is left to check (use it to resume a long run)
     --save       after a complete count, keep this run in .vibe-check/history/ so the next run can compare
     --check-list print the check-yourself items grouped by place (one visit per place), for the report
+    --question-list print the open questions for the report: one line each, and those waiting on the same missing file grouped
     --brief MOD  print only the check lines a helper must do in module MOD (its IDs from redo.md), without the prose
     --part FILE  check only the rows in FILE (a helper's ledger.d/<module>.md) before the helper finishes
     --carry      before the helpers start: carry over every check whose wording and cited files are unchanged since the
@@ -105,6 +106,7 @@ def bar(score: int) -> str:
 
 
 EU_ONLY = set()   # 🔴 checks that block only for EU/EEA users: marked *(blocker for EU users)* in the checklist
+EU_ANSWER = {}   # v5.0.1: 'EU: yes' or 'EU: no' in answers.md (users in the EU, EEA or UK)
 ANSWER_ADDS = {}  # v3.6.7: things an answer added to the profile (module or 'eu-users') -> why, from answers.md 'ADDS:' lines
 ON_WORD = re.compile(r"\b(?:user (?:confirmed|says|said|told)|per (?:the )?user|the user confirms|according to the user)\b", re.I)
 
@@ -157,8 +159,10 @@ def downgraded(cid, results):
     """A FAIL on an EU-only blocker, recorded as 'outside the EU', counts as should-fix."""
     if cid not in EU_ONLY or cid not in results:
         return False
-    if "eu-users" in ANSWER_ADDS:   # an answer said there are EU users: the blocker stays a blocker
+    if "eu-users" in ANSWER_ADDS or EU_ANSWER.get("v") == "yes":   # an answer said there are EU users: the blocker stays a blocker
         return False
+    if EU_ANSWER.get("v") == "no":   # v5.0.1: asked once, the answer settles every EU-only blocker
+        return True
     blob = (results[cid][1] + " " + results[cid][2]).lower()
     return "outside the eu" in blob or "no eu users" in blob
 
@@ -215,6 +219,54 @@ def check_groups(required, results, checks):
             place, what, _ = check_parts(results[c][1])
             groups.setdefault(place or "Other", []).append((c, what))
     return groups
+
+
+PATH_RX = re.compile(r"(?<![\w@/.-])((?:[\w-]+/)*[\w-]+\.(?:dart|kt|swift|java|tsx?|jsx?|mjs|py|rb|go|php|vue|svelte|sql|json|ya?ml|xml|plist|gradle|md))\b")
+
+
+def question_text(ev):
+    """The question part of an ASK: row, short: up to the first '?' or ' · tried:'."""
+    q = re.sub(r"^\s*ASK:\s*", "", ev, flags=re.I)
+    q = re.split(r"\s+·\s+(?:tried|code):", q)[0].strip()
+    m = re.search(r"^(.{20,220}?\?)", q)
+    q = m.group(1) if m else q
+    return q if len(q) <= 220 else q[:217].rsplit(" ", 1)[0] + "…"
+
+
+def question_groups(required, results, checks, root, ans_text):
+    """Open questions, with the ones that wait on the same missing file grouped (v5.0.1)."""
+    open_q = [c for c in required if status_of(c, results, checks) == "ASK" and ask_kind(c, results) == "ask"]
+    waiting, rest = {}, []
+    for c in open_q:
+        ev = results[c][1]
+        missing = next((p for p in PATH_RX.findall(ev) if not p.startswith(".vibe-check") and not (root / p).exists()
+                        and not any(root.glob(f"**/{p}"))), None)
+        (waiting.setdefault(missing, []) if missing else rest).append(c)
+    for f in [f for f, ids in waiting.items() if len(ids) < 3]:
+        rest += waiting.pop(f)
+    order = {c: i for i, c in enumerate(required)}
+    rest.sort(key=lambda c: order[c])
+    answers = {}
+    for line in ans_text.splitlines():
+        m = re.match(r"^\|\s*((?:BS-\d{2}|[A-Z0-9]+-\d{3}))\s*\|[^|]*\|\s*([^|]*?)\s*\|", line)
+        if m:
+            answers[m.group(1)] = m.group(2)
+    return waiting, rest, answers
+
+
+def print_question_list(required, results, checks, root, ans_text):
+    waiting, rest, answers = question_groups(required, results, checks, root, ans_text)
+    total = sum(len(v) for v in waiting.values()) + len(rest)
+    print(f"## ❓ Questions for you\n\n{total} open question{'s' if total != 1 else ''}. Answer any time: \"answer question 2\".\n")
+    for f, ids in sorted(waiting.items(), key=lambda kv: -len(kv[1])):
+        print(f"**Waiting on code that isn't written yet: `{f}` ({len(ids)} checks).** They're checked again once it exists: {', '.join(ids)}.\n")
+    for i, c in enumerate(rest, 1):
+        a = answers.get(c, "").strip()
+        tag = "" if not a else (" *(skipped)*" if re.search(r"skip", a, re.I) else f" *(you said: {a[:60]})*")
+        if not a:
+            tag = " *(not asked yet)*"
+        print(f"{i}. **{c}** {checks[c][2]}: {question_text(results[c][1])}{tag}")
+    print()
 
 
 def ask_kind(cid, results):
@@ -336,7 +388,7 @@ LABEL = {"PASS": "✅", "BLOCKER": "❌", "SHOULD": "⚠️", "ASK": "❓", "NA"
 def build_appendix(required, results, checks):
     """Every check with what was found, grouped by area, written by the script (costs no AI work)."""
     def cell(s):
-        return re.sub(r"\s+", " ", s.replace("|", "/")).strip()[:220]
+        return md_short(s.replace("\\|", "|"), 300).replace("|", "\\|")
     out = [APPX_OPEN, "## 📚 Every check, with what was found", "",
            "Each row is copied from the ledger. ✅ rows show the evidence that it passed; ➖ rows say why it doesn't apply.", ""]
     for name, mods in AREAS:
@@ -659,6 +711,23 @@ def verify_script_row(key, r, ev, root, vc):
     return []
 
 
+def md_short(text, n):
+    """Cut markdown text at a word, with '…', without leaving a code span or bold open (v5.0.1)."""
+    text = re.sub(r"\s+", " ", str(text)).strip()
+    if len(text) > n:
+        text = text[:n - 1].rsplit(" ", 1)[0].rstrip(" ,;:(") + "…"
+    if text.count("`") % 2:
+        text = text[:text.rfind("`")] + text[text.rfind("`") + 1:]
+    if text.count("**") % 2:
+        i = text.rfind("**"); text = text[:i] + text[i + 2:]
+    return text
+
+
+def short(text, n):
+    text = re.sub(r"\s+", " ", str(text)).strip()
+    return text if len(text) <= n else text[:n - 1].rsplit(" ", 1)[0] + "…"
+
+
 def write_carry(ledger_path: Path):
     """--carry: write ledger.d/00-carried.md and redo.md from the newest saved run."""
     vc = ledger_path.parent
@@ -701,6 +770,11 @@ def write_carry(ledger_path: Path):
     changed = sorted({w for w in why_not.values() if w.endswith(" changed")})
     if changed:
         redo += ["## Files changed since then", ""] + [f"- {w[:-8]}" for w in changed] + [""]
+    # v5.0.1: last run's result for each check to redo, one short line: never read the old ledger into the conversation
+    old = dict(prev["carry"].get("hints", {}))
+    hints = [f"- {c} {old[c][0]}: {short(old[c][1], 140)}" for c in checks if c in why_not and c in old]
+    if hints:
+        redo += [f"## Last run's result (hints only: check again with fresh evidence)", ""] + hints + [""]
     (vc / "redo.md").write_text("\n".join(redo), "utf-8")
     tally = {}
     for w in why_not.values():
@@ -726,6 +800,8 @@ def print_brief(module: str, vc: Path) -> int:
         todo = set(re.findall(r"[A-Z0-9]+-\d{3}", m.group(1))) if m else set()
     lines = re.findall(r"^- \[ \] ((?:🔴|🟡|🟢) ([A-Z0-9]+-\d{3}) .*)$", text, re.M)
     keep = [full for full, cid in lines if todo is None or cid in todo]
+    hints = dict(re.findall(r"^- ([A-Z0-9]+-\d{3}) (.+)$", redo.read_text("utf-8"), re.M)) if redo.exists() else {}
+    keep = [full + (f"\n  - last run: {hints[cid]}" if cid in hints else "") for full, cid in lines if (todo is None or cid in todo)]
     head = text.split("\n## ", 1)[0].strip()
     where = re.search(r"^Where to look:.*$", text, re.M)
     print(f"# {module}: {len(keep)} check(s) to do" + (" (from redo.md)" if todo is not None else ""))
@@ -763,7 +839,7 @@ def load_checklist():
             if "*(blocker for EU users)*" in rest:
                 EU_ONLY.add(cid)
             nm = re.match(r"\*\*(.+?)\*\*", rest)
-            checks[cid] = (f.stem, sev, (nm.group(1) if nm else rest[:70]).rstrip(".:,"))
+            checks[cid] = (f.stem, sev, (nm.group(1) if nm else md_short(re.split(r"(?<=[.:])\s", rest.replace("**", ""))[0], 80)).rstrip(".:,"))
             prefixes[cid.split("-")[0]] = f.stem
     order = ["blind-spots"] + [m for m in CORE if m in modules] + [m for m in modules if m not in CORE and m != "blind-spots"]
     return order, checks, prefixes
@@ -940,6 +1016,7 @@ def main() -> int:
     want_fix_plan = "--fix-plan" in argv
     want_save = "--save" in argv
     want_check_list = "--check-list" in argv
+    want_question_list = "--question-list" in argv
     part_file = None
     if "--part" in argv:
         i = argv.index("--part"); part_file = Path(argv[i + 1]); del argv[i:i + 2]
@@ -974,6 +1051,10 @@ def main() -> int:
     ans_text, answered, adds = load_answers(ledger_path.parent)
     errors.extend(builds_problems(text, ans_text))
     ANSWER_ADDS.clear(); ANSWER_ADDS.update(adds)
+    EU_ANSWER.clear()
+    _eu = re.search(r"^\s*[-*]?\s*EU\s*:\s*(yes|no)\b", ans_text, re.M | re.I)
+    if _eu:
+        EU_ANSWER["v"] = _eu.group(1).lower()
     known_mods = {v[0] for v in checks.values()}
     for a in adds:
         if a != "eu-users" and a not in known_mods:
@@ -1118,6 +1199,10 @@ def main() -> int:
                     errors.append(f"{rk}: the re-check needs its own evidence (file:line, command or setting)")
                 elif verdict.startswith("OVERTURNED") and results[c][0] == "PASS":
                     errors.append(f"{rk}: {c} was overturned by the re-check but is still PASS: change its result")
+
+    if want_question_list:
+        print_question_list(required, results, checks, root, ans_text)
+        return 0
 
     if want_check_list:
         groups = check_groups(required, results, checks)
@@ -1472,6 +1557,11 @@ def main() -> int:
                               f"first, as choices, up to 15 in all ({asked_n} so far), and record each answer or skip in .vibe-check/answers.md")
             qsec = re.search(r"^##[^\n]*Questions for you[^\n]*\n(.*?)(?=^## |\Z)", rep_text, re.M | re.S)
             not_listed = [c for c in unasked if not qsec or c not in qsec.group(1)]
+            wq, _, _ = question_groups(required, results, checks, root, ans_text)
+            for f in wq:
+                if not qsec or f"Waiting on code that isn't written yet: `{f}`" not in qsec.group(1):
+                    errors.append(f"REPORT: {len(wq[f])} questions wait on the missing file {f}: paste the grouped list from "
+                                  "'coverage.py --question-list' into '❓ Questions for you' instead of asking each one")
             if not_listed:
                 errors.append(f"REPORT: {len(not_listed)} open question(s) aren't listed under '❓ Questions for you' "
                               f"({', '.join(not_listed[:6])}…): every question not asked goes there, so none is lost")
@@ -1514,6 +1604,23 @@ def main() -> int:
                 for _line_no, _kind, _title in find_secrets(_shared):
                     errors.append(f"REPORT: {_shared.name}:{_line_no} looks like a full {_title}. Mask it: first 4 characters "
                                   "and where it is (e.g. `sk_l…` in src/lib/stripe.ts:3)")
+            eu_open = [c for c in required if c in EU_ONLY and c in results and results[c][0] == "FAIL" and not downgraded(c, results)]
+            if eu_open and not EU_ANSWER and "eu-users" not in ANSWER_ADDS:
+                errors.append(f"REPORT: {', '.join(eu_open)} block only for users in the EU, EEA or UK, and nobody asked: ask once, as a choice, "
+                              "and record 'EU: yes' or 'EU: no' in .vibe-check/answers.md")
+            # v5.0.1: the report says the version that really ran, and no section twice
+            hv = re.search(r"vibe-check:\**\s*v?(\d+\.\d+\.\d+)", rep_text)
+            if hv and hv.group(1) != skill_version():
+                errors.append(f"REPORT: the report says vibe-check v{hv.group(1)} but v{skill_version()} is installed: this session is "
+                              f"following older instructions. Tell the user to start a new session and run the check again")
+            seen_h, dup_h = set(), []
+            for h in re.findall(r"^##\s+(.+?)\s*$", rep_text, re.M):
+                k = re.sub(r"[^\w ]", "", h).strip().lower()
+                if k in seen_h and k not in dup_h:
+                    dup_h.append(k)
+                seen_h.add(k)
+            if dup_h:
+                errors.append(f"REPORT: section(s) appear twice: {', '.join(dup_h)}. Keep one of each")
             if diff and "Since last check" not in rep_text:
                 errors.append("REPORT: there is an earlier run in .vibe-check/history/, so the report needs the 'Since last check' line")
             if not errors:
@@ -1547,8 +1654,10 @@ def main() -> int:
             hist_dir.mkdir(exist_ok=True)
             from datetime import datetime
             name = datetime.now().strftime("%Y-%m-%d-%H%M%S-%f") + ".json"
-            carry = {"evidence": {}, "files": {}, "items": item_hashes(), "profile": profile_hash(ledger_path.parent)}
+            carry = {"evidence": {}, "files": {}, "hints": {}, "items": item_hashes(), "profile": profile_hash(ledger_path.parent)}
             for c in required:
+                if c in results and results[c][0] in ("FAIL", "CAN'T TELL"):   # v5.0.1: kept as a one-line hint for the next run
+                    carry["hints"][c] = [results[c][0], short(results[c][1], 140)]
                 if c in results and results[c][0] in ("PASS", "N/A"):
                     ev = results[c][1]
                     cm = CARRY_RX.match(ev)

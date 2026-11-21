@@ -253,6 +253,11 @@ def main() -> int:
             strong = [h for h in hs if h["strength"] == "strong" and not h["test"]]
             if strong:
                 print(f"  NOTE     {q:<20} {len(strong):>3} places, e.g. {strong[0]['where']}")
+    heavy = [m for m in ("kids-education", "fintech") if m in modules]
+    if heavy:
+        what = " and ".join({"kids-education": "children", "fintech": "payments"}[m] for m in heavy)
+        print(f"LEVEL ADVICE: Full (the code shows {what}; a Quick check skips the {', '.join(heavy)} module"
+              f"{'s' if len(heavy) > 1 else ''}, so its score would leave them out). Say this when offering the level.")
     return 0
 
 

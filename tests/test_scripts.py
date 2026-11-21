@@ -429,6 +429,55 @@ def main() -> int:
         r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
         check(r.returncode == 0, f"no-change guard: a change listed in an approved fix card is allowed:\n{r.stdout[-400:]}")
         victim.write_bytes(before); (out / "fix-log.md").unlink()
+        # v5.0.1: the report must say the version that really ran, and no section twice
+        report.write_text(good_report.replace("# report\n", "# report\n\n**vibe-check:** v3.9.1 · Full\n", 1))
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "start a new session" in r.stdout, f"v5.0.1: a report from older instructions should be refused:\n{r.stdout[-300:]}")
+        report.write_text(good_report + "\n## ⚠️ Fix before scale\n\nagain\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--verify-report", str(report))
+        check(r.returncode == 1 and "appear twice" in r.stdout, f"v5.0.1: a section printed twice should be refused:\n{r.stdout[-300:]}")
+        report.write_text(good_report)
+        # v5.0.1: questions that wait on the same missing file become one line
+        waits = [f"| {ids[k]} | CAN'T TELL | ASK: lib/screens.dart isn't in the repo yet: where is this screen? · tried: `rg Screen lib` found nothing |" for k in (2, 3, 4)]
+        lr = ledger(out, [ok_rows[0], ok_rows[1]] + waits + full[5:] + inv_rows + hit_rows)
+        r = run("coverage.py", str(lr), "--question-list")
+        check(r.returncode == 0 and "Waiting on code that isn't written yet: `lib/screens.dart` (3 checks)" in r.stdout
+              and f"1. **{ask_id}**" in r.stdout and ids[2] not in r.stdout.split("checks).**")[-1].split("\n1.")[1],
+              f"v5.0.1: --question-list should group the 3 questions waiting on lib/screens.dart:\n{r.stdout[-600:]}")
+        r = run("coverage.py", str(lr), "--verify-report", str(report))
+        check("wait on the missing file lib/screens.dart" in r.stdout, f"v5.0.1: a report without the grouped line should be refused:\n{r.stdout[-300:]}")
+        # v5.0.1: EU-only blockers need the EU question asked once; 'EU: no' makes them should-fix
+        eu = [x if not x.startswith("| LAW-001 |") else f"| LAW-001 | FAIL 🔬 Confirmed | {REAL[0]}:1 loads Google Fonts from Google's servers |" for x in ok_rows]
+        lr = ledger(out, eu)
+        r = run("coverage.py", str(lr), "--verify-report", str(report))
+        check("nobody asked" in r.stdout and "LAW-001" in r.stdout, f"v5.0.1: an EU-only blocker with no EU answer should ask once:\n{r.stdout[-300:]}")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nEU: no\n")
+        r = run("coverage.py", str(lr))
+        check("LAW-001" not in [b["id"] for b in json.loads((out / "results.json").read_text())["blockers"]] and "nobody asked" not in r.stdout,
+              "v5.0.1: with 'EU: no', LAW-001 counts as should-fix")
+        (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+        run("coverage.py", str(ledger(out, ok_rows)))
+        # v5.0.1: level advice when the code shows children or payments; fairer severities
+        r = run("profile.py", str(app))
+        check("LEVEL ADVICE: Full" in r.stdout and "children" in r.stdout and "payments" in r.stdout, f"v5.0.1: profile.py should advise Full:\n{r.stdout[-300:]}")
+        sec = (ROOT / "skills/vibe-check/references/security.md").read_text()
+        check("🟡 SEC-092" in sec and "PBKDF2" in sec and "🟡 MNT-007" in (ROOT / "skills/vibe-check/references/maintainability.md").read_text(),
+              "v5.0.1: PBKDF2 passes SEC-041 with SEC-092 as should-fix, and MNT-007 is should-fix")
+        # v5.0.1: the PDF keeps a | inside code in one cell, drops empty tables, sections and columns
+        sys.path.insert(0, str(SCRIPTS))
+        import report_pdf as rpdf
+        check(rpdf.split_row('| 2 | No tests | `grep -rln "billing\\|auth\\|signup" tests` -> none | yes |') ==
+              ["2", "No tests", '`grep -rln "billing|auth|signup" tests` -> none', "yes"], "v5.0.1 pdf: a | inside code must not split the cell")
+        td = rpdf.tidy("## Standards\n\n| Standard | ok |\n|---|---|\n\n## Not checked\n\n- x\n\n**Why ◐ , and:** security : y")
+        check("Standards" not in td and "## Not checked" in td and "security: y" in td and "◐, and" in td, f"v5.0.1 pdf: tidy failed: {td!r}")
+        broken = out / "broken.md"
+        broken.write_text("# vibe-check report: T\n\n| # | Issue | Confidence | Fix |\n|---|---|---|---|\n| 1 | a `x\\|y` b | | do it |\n\n## Standards\n\n| S | ok |\n|---|---|\n")
+        r = run("report_pdf.py", str(broken))
+        check(r.returncode == 0 and broken.with_suffix(".pdf").exists(), f"v5.0.1 pdf: should render a report with empty columns and tables:\n{r.stdout[-300:]}{r.stderr[-300:]}")
+        broken.unlink(); broken.with_suffix(".pdf").unlink(missing_ok=True)
+        sys.path.insert(0, str(SCRIPTS)); import coverage as covmod
+        check(covmod.md_short("an **open bold and `code that runs long past the end", 30).count("`") % 2 == 0, "v5.0.1: cut text must not leave code open")
+        check("checkout.session.completed" in covmod.load_checklist()[1]["PLT-040"][2], "v5.0.1: check names are cut at a word, not mid-word")
         run("profile.py", str(app))
         # CAN'T TELL must say whether it's a question (ASK:) or something to check (CHECK:)
         r = run("coverage.py", str(ledger(out, [full[0], full[1].replace("| PASS | ", "| CAN'T TELL | ")] + full[2:] + inv_rows + hit_rows)))
@@ -663,6 +712,19 @@ def main() -> int:
         r = run("coverage.py", str(out / "ledger.md"))
         check(r.returncode == 1 and "written by 'coverage.py --carry' only" in r.stdout, "carry: a hand-typed carried row must be rejected")
         shutil.rmtree(out / "ledger.d")
+        # v5.0.1: a check to redo gets last run's result as one line in redo.md (and in --brief), so the old ledger is never read
+        r_save = run("coverage.py", str(ledger(out, ok_rows)), "--save")
+        changed.write_text(before + "\n// edited after the audit\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--carry")
+        redo_txt = (out / "redo.md").read_text()
+        check("## Last run's result" in redo_txt and re.search(r"^- " + re.escape(ids[0]) + r" FAIL: ", redo_txt, re.M),
+              f"v5.0.1 carry: redo.md should hold last run's FAIL for {ids[0]} as a hint:\n{redo_txt[-500:]}\nSAVE:{r_save.stdout[-300:]}")
+        (out / "redo.md").write_text("## security (1)\nSEC-001\n\n## Last run's result (hints only)\n\n- SEC-001 FAIL: hand-rolled auth at lib/auth.ts:4\n")
+        r = run("coverage.py", str(out / "ledger.md"), "--brief", "security")
+        check("SEC-001" in r.stdout and "last run: FAIL: hand-rolled auth" in r.stdout and "SEC-002" not in r.stdout,
+              f"v5.0.1 carry: --brief should show last run's result under the check:\n{r.stdout[-300:]}")
+        changed.write_text(before)
+        shutil.rmtree(out / "ledger.d", ignore_errors=True)
 
         # v3.7 autocheck: certain answers only, and coverage.py re-runs the rule so AUTO rows can't be typed
         with tempfile.TemporaryDirectory() as tmpa:
@@ -888,12 +950,20 @@ def main() -> int:
                 bcfg = dict(cfg, flows=[{"name": "home", "steps": [{"goto": "/"}, {"expect_text": "Shop"}]},
                                         {"name": "cart", "steps": [{"goto": "/broken"}, {"expect_text": "Cart"}]},
                                         {"name": "checkout", "payment": True, "steps": [{"goto": "/pay"}, {"click": "#pay"}, {"expect_text": "Payment received"}]}],
-                            pages=["/", "/wide"])
+                            pages=["/", "/wide", "/a11y"])
                 (rt / "runtime.json").write_text(json.dumps(bcfg))
                 r = run("runtime.py", str(app), "--run", "browser", "--consent")
                 got = {x["id"]: x for x in json.loads((rt / "results.json").read_text())["results"]}
                 check("1 of 2 flows broke: cart" in got.get("runtime:flows", {}).get("summary", ""), f"runtime: the browser should catch the page error on /broken only: {got.get('runtime:flows')}")
-                check(got.get("runtime:phone-width", {}).get("summary", "").endswith("/wide"), f"runtime: /wide should overflow a phone screen: {got.get('runtime:phone-width')}")
+                pw = got.get("runtime:phone-width", {})
+                check("375px): /wide;" in pw.get("summary", "") and "UX-008" in pw.get("checks", []), f"runtime: /wide should overflow a phone screen and fail UX-008: {pw}")
+                check(got.get("runtime:console-errors", {}).get("checks") == ["QA-016"] and got["runtime:console-errors"]["status"] == "fail",
+                      f"runtime: the page error should fail QA-016: {got.get('runtime:console-errors')}")
+                if (Path(pw_dir) / "node_modules" / "axe-core").exists():
+                    a1, a2 = got.get("runtime:a11y-controls", {}), got.get("runtime:a11y-alt-text", {})
+                    check(a1.get("status") == "fail" and "button-name" in a1.get("summary", "") and "clickable non-controls" in a1.get("summary", ""),
+                          f"runtime: axe should find the unnamed button and the clickable div (UX-001): {a1}")
+                    check(a2.get("status") == "fail" and "image-alt" in a2.get("summary", ""), f"runtime: axe should find the image without alt text (UX-003): {a2}")
                 check(got.get("runtime:payment-flow", {}).get("status") == "pass", f"runtime: the test payment flow should pass: {got.get('runtime:payment-flow')}")
                 (rt / "node_modules").unlink()
             cfg["base_url"] = "https://shop.example.com"; (rt / "runtime.json").write_text(json.dumps(cfg))

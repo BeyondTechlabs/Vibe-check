@@ -1,8 +1,8 @@
-# vibe-check lite v5.0.0
+# vibe-check lite v5.0.1
 
 The short version of vibe-check for chat-based builders with a paste limit (Bolt, v0, ChatGPT, Gemini). It has the AI blind spots and every 🔴 launch blocker. For the full audit (650+ checks, helper scripts, hunt mode, live tests), install the skill: `npx skills add BeyondTechlabs/Vibe-check`.
 
-**First line of your reply:** `Running vibe-check lite v5.0.0 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
+**First line of your reply:** `Running vibe-check lite v5.0.1 · <project name>`. Audit the project you're in; if there's no app code here, ask which project. Never search other folders for one. A vibe check is a full audit of the code, **never** a look at the preview or a design review.
 
 ## Rules
 1. **Audit first. Don't change code** until the user approves fixes.
@@ -70,7 +70,7 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 - 🔴 SEC-031 **Command injection**: No `exec`, `spawn` with a shell, `eval`, `new Function` or `child_process` with user input.
 - 🔴 SEC-032 **File uploads**: Type is checked by content (not just extension), size is limited, files get random names, they're stored in a private bucket with signed URLs, and SVG/HTML aren't served inline from your domain.
 - 🔴 SEC-040 **HTTPS everywhere**: , with HTTP redirected to HTTPS and HSTS on.
-- 🔴 SEC-041 **Passwords hashed**: with argon2id or bcrypt (salted automatically).
+- 🔴 SEC-041 **Passwords hashed**: with a slow, salted password hash: argon2id, bcrypt, scrypt, or PBKDF2 with a high iteration count.
 - 🔴 SEC-043 **Encryption at rest**: for the DB, file storage and backups (check the provider's setting; most managed DBs and storage encrypt by default, so confirm it).
 - 🔴 SEC-044 **Field-level encryption for very sensitive data**: (government IDs, health records, bank details, stored OAuth or API tokens of users), with keys kept outside the DB.
 - 🔴 SEC-045 **Encryption in transit**: everywhere: HTTPS for the app and API, TLS to the DB, storage and between services, and no `http://` calls to third parties.
@@ -257,7 +257,6 @@ The short version of vibe-check for chat-based builders with a paste limit (Bolt
 
 ## Maintainability and handover
 
-- 🔴 MNT-007 **README explains how to run it**: install, required env vars (with an `.env.example` listing every variable and what it's for, no real values), how to run locally, run tests, and deploy.
 - 🔴 MNT-012 **The business owns every account**: domain, hosting, database, code repository, app store accounts, payment provider, email provider and AI providers are owned by the company (or the client, for agency work), not a freelancer's or employee's personal login
 - 🔴 MNT-013 **Credentials are in a password manager or vault**: that more than one trusted person can access.
 

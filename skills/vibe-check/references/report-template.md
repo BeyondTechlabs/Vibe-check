@@ -97,9 +97,13 @@ Checks redone: 92 · carried over: 143 · settled by script: 6 *(the line `cover
 
 ## ❓ Questions for you
 
-Only the `ASK:` questions the user skipped (the rest were asked before this report and are already counted). Answer any time: "answer question 2".
+*(Paste the list from `coverage.py --question-list`: one line per question, and questions waiting on the same unwritten file grouped into one line. Never type it by hand.)*
 
-1. <Example: "Should every technician see every client, or only clients they visit?">
+<N> open questions. Answer any time: "answer question 2".
+
+**Waiting on code that isn't written yet: `<file>` (<N> checks).** They're checked again once it exists: <IDs>.
+
+1. **<ID>** <check name>: <Example: "Should every technician see every client, or only clients they visit?"> *(skipped)*
 
 ## 🖥️ Check these yourself
 
@@ -204,7 +208,7 @@ Only the `ASK:` questions the user skipped (the rest were asked before this repo
 | OWASP API Security Top 10 (2023) | | | | | |
 | OWASP Top 10 for LLM Applications (2025) | | | | | |
 | OWASP Mobile Top 10 (2024) | | | | | |
-| OWASP ASVS 5.0.0 (by chapter) | | | | | |
+| OWASP ASVS 5.0.1 (by chapter) | | | | | |
 | 2025 CWE Top 25 | | | | | |
 
 ## Not checked
@@ -251,7 +255,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -266,7 +270,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.1 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back

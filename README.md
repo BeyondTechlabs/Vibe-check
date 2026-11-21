@@ -7,7 +7,7 @@
 Security, privacy and launch audit for web and mobile apps: checked against your actual code, with evidence for every check, without changing what you built.
 
 [![Release](https://img.shields.io/github/v/release/BeyondTechlabs/Vibe-check?style=for-the-badge&color=22c55e&label=release)](https://github.com/BeyondTechlabs/Vibe-check/releases/latest)
-[![Checks](https://img.shields.io/badge/checks-768-18181b?style=for-the-badge)](skills/vibe-check/references)
+[![Checks](https://img.shields.io/badge/checks-769-18181b?style=for-the-badge)](skills/vibe-check/references)
 [![Fix recipes](https://img.shields.io/badge/fix_recipes-84-18181b?style=for-the-badge)](skills/vibe-check/references/fixes.md)
 [![Stars](https://img.shields.io/github/stars/BeyondTechlabs/Vibe-check?style=for-the-badge&logo=github&color=18181b)](https://github.com/BeyondTechlabs/Vibe-check/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](LICENSE)

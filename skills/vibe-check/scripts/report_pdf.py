@@ -32,7 +32,7 @@ SOFT = (0.955, 0.958, 0.965)
 COLORS = {"green": GREEN, "red": (0.86, 0.15, 0.15), "amber": (0.92, 0.58, 0.05), "blue": (0.15, 0.45, 0.92),
           "grey": (0.62, 0.63, 0.66), "purple": (0.55, 0.3, 0.85)}
 STATUS = {"✅": "green", "✔": "green", "✓": "green", "🟢": "green", "❌": "red", "🔴": "red", "❗": "red",
-          "⚠": "amber", "🟡": "amber", "❓": "blue", "🔵": "blue", "➖": "grey", "🔧": "purple"}
+          "⚠": "amber", "🟡": "amber", "❓": "blue", "🔵": "blue", "➖": "grey", "🔧": "purple", "◐": "amber"}
 SWAP = {"→": "->", "←": "<-", "↔": "<->", "⇒": "=>", "≥": ">=", "≤": "<=", "≠": "!=", "≈": "~", "₹": "Rs ", "✗": "x",
         " ": " ", " ": " ", " ": " ", "↩": "", "⬆": "^", "−": "-", "‑": "-"}
 
@@ -108,6 +108,27 @@ def pdf_str(s):
 
 
 # ---- inline text: **bold**, *italic*, `code`, [links](url), status symbols as coloured dots, bars ----
+def split_row(line):
+    """Table cells, split on | but not on an escaped \\| or a | inside `code` (v5.0.1)."""
+    s = line.strip()
+    s = s[1:] if s.startswith("|") else s
+    s = s[:-1] if s.endswith("|") and not s.endswith("\\|") else s
+    cells, cur, code, k = [], "", False, 0
+    while k < len(s):
+        ch = s[k]
+        if ch == "\\" and k + 1 < len(s) and s[k + 1] == "|":
+            cur += "|"; k += 2; continue
+        if ch == "`":
+            code = not code
+        if ch == "|" and not code:
+            cells.append(cur.strip()); cur = ""
+        else:
+            cur += ch
+        k += 1
+    cells.append(cur.strip())
+    return cells
+
+
 def clean(s):
     s = re.sub(r"<!--.*?-->", "", s)
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
@@ -347,6 +368,10 @@ class Doc:
         pad = 4
         ncol = max(len(r) for r in rows)
         rows = [r + [""] * (ncol - len(r)) for r in rows]
+        if len(rows) > 1:   # v5.0.1: drop a column nobody filled in (e.g. an empty Confidence column)
+            keep = [ci for ci in range(ncol) if any(r[ci].strip() for r in rows[1:]) or not rows[0][ci].strip()]
+            if keep and len(keep) < ncol:
+                rows = [[r[ci] for ci in keep] for r in rows]; ncol = len(keep)
         cells = [[segments(c, "B" if ri == 0 else "R") for c in r] for ri, r in enumerate(rows)]
         natural = [max(sum(seg_width(s, size) for s in cells[ri][ci]) for ri in range(len(rows))) + 2 * pad for ci in range(ncol)]
         total = sum(natural)
@@ -461,9 +486,38 @@ def brand(doc, ops, n, total):
     return "\n".join(pre + ops)
 
 
+def tidy(md):
+    """v5.0.1: drop tables with no rows and headings left with nothing under them; fix ' ,' and ' :' left by empty placeholders."""
+    out, lines, i = [], md.splitlines(), 0
+    while i < len(lines):
+        if lines[i].strip().startswith("|"):
+            j = i
+            while j < len(lines) and lines[j].strip().startswith("|"):
+                j += 1
+            block = lines[i:j]
+            data = [l for l in block[1:] if not re.match(r"^\|?\s*:?-{2,}", l.strip())]
+            if data:
+                out += block
+            i = j
+            continue
+        out.append(lines[i]); i += 1
+    keep = []
+    for k, line in enumerate(out):
+        m = re.match(r"^(#{1,4})\s", line)
+        if m:
+            nxt = next((l for l in out[k + 1:] if l.strip()), None)
+            m2 = re.match(r"^(#{1,4})\s", nxt) if nxt is not None else None
+            if nxt is None or (m2 and len(m2.group(1)) <= len(m.group(1))):
+                continue
+        keep.append(line)
+    text = "\n".join(keep)
+    parts = re.split(r"(`[^`\n]*`)", text)
+    return "".join(p if p.startswith("`") else re.sub(r"(?<=\S) +([,:;])(?=\s)", r"\1", p) for p in parts)
+
+
 def render(md, res, project, version, date):
     doc = Doc(project, version, date)
-    lines = md.splitlines()
+    lines = tidy(md).splitlines()
     i, covered = 0, False
     para = []
 
@@ -509,7 +563,7 @@ def render(md, res, project, version, date):
             flush()
             rows = []
             while i < len(lines) and lines[i].strip().startswith("|"):
-                cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+                cells = split_row(lines[i])
                 if not all(re.match(r"^:?-{2,}:?$", c) for c in cells if c):
                     rows.append(cells)
                 i += 1

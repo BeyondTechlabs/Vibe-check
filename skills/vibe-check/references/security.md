@@ -69,7 +69,7 @@ Mark each item PASS / FAIL / N/A / CAN'T TELL, with evidence. 🔴 blocks launch
 ## Transport, headers and crypto
 
 - [ ] 🔴 SEC-040 **HTTPS everywhere**, with HTTP redirected to HTTPS and HSTS on.
-- [ ] 🔴 SEC-041 **Passwords hashed** with argon2id or bcrypt (salted automatically). Never encrypted, plain text, MD5 or SHA-*.
+- [ ] 🔴 SEC-041 **Passwords hashed** with a slow, salted password hash: argon2id, bcrypt, scrypt, or PBKDF2 with a high iteration count. Never encrypted, plain text, MD5 or a single SHA-* round. A slow hash below current guidance passes here and fails SEC-092.
 - [ ] 🟡 SEC-042 **Hashing vs encryption.** Hashing for things you only verify (passwords, tokens); encryption for things you need back (keys for third-party accounts and similar).
 - [ ] 🔴 SEC-043 **Encryption at rest** for the DB, file storage and backups (check the provider's setting; most managed DBs and storage encrypt by default, so confirm it). 🔴 for apps with children's, health, financial or ID data; 🟡 otherwise.
 - [ ] 🔴 SEC-044 **Field-level encryption for very sensitive data** (government IDs, health records, bank details, stored OAuth or API tokens of users), with keys kept outside the DB. N/A if the app stores none.
@@ -133,3 +133,4 @@ Check how data could reach someone who shouldn't see it, even when access contro
 - [ ] 🟡 SEC-089 **bcrypt's 72-byte limit is handled:** bcrypt ignores everything after 72 bytes, so it's never used on joined values (username + password cache keys caused an Okta login bypass for long usernames in 2024), and very long passwords are either refused with a stated limit or handled by a library that pre-hashes safely (or Argon2id is used).
 - [ ] 🟡 SEC-090 **Encryption is authenticated:** data the app encrypts itself uses AES-GCM, ChaCha20-Poly1305 or a library such as libsodium or Tink. No ECB, no CBC without a MAC (padding-oracle attacks), no reused nonces, no home-made crypto, and every decryption failure returns the same error.
 - [ ] 🟡 SEC-091 **Security events reach a human:** alerts for spikes in failed logins or password resets, 2FA or email changes on admin accounts, new admins or role changes, new API keys, rate limits tripping and admin sign-ins from a new country. Logging them without anyone being told doesn't count.
+- [ ] 🟡 SEC-092 **Password hashing strength meets current guidance:** argon2id (19 MiB, 2 passes or more), bcrypt cost 10 or more, scrypt N=2^17, or PBKDF2-HMAC-SHA256 with 600,000 iterations or more (OWASP Password Storage Cheat Sheet). Where the platform caps iterations (Cloudflare Workers allows 100,000), add a server-side pepper secret and rehash on next sign-in.

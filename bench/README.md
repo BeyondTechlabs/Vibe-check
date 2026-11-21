@@ -37,3 +37,4 @@ Record the result in the table below with the vibe-check version, tool and model
 | Date | vibe-check | Tool and model | Found |
 |---|---|---|---|
 | 2026-11-20 | 3.9.0 | Claude desktop app (Code), Opus 5.5, medium effort | 20 / 20, checked against the report text (all 20 are findings in the blockers; 8 settled by script) |
+| 2026-11-21 | 5.0.0 | Claude desktop app (Code), Opus 5.5, medium effort | 20 / 20 by `score.py` (all 20 in the 16 blockers; 12 settled by script). A re-check on the 2026-11-20 folder, not a fresh copy: about 218k tokens in one conversation with no helpers, against about 1.08M with 8 helpers before |
