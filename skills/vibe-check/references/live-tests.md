@@ -2,6 +2,25 @@
 
 Load this file when the app can run locally or the user has a **staging or preview URL**, at the Full and Enterprise levels. Reading code shows what *should* happen; these tests show what *does* happen when someone actually tries. Each test is quick, safe and repeatable.
 
+## Run them with `runtime.py` (don't improvise requests)
+
+The tests are scripted, so results are the same every run and cost few tokens: the model fills in a plan and reads a summary.
+
+1. **Ask once, as a choice** (the rules below). For each yes write it in `.vibe-check/answers.md`: `RUNTIME: yes`; and `RUNTIME: playwright: yes` if the user also agrees to install Playwright and Chromium for browser flows (about 300–500 MB, into `.vibe-check/runtime/`, never the project's `package.json`; if Chromium can't be downloaded, an installed Google Chrome is used). A staging host needs its own line: `RUNTIME: target staging.example.com: yes`. Production is refused by the script.
+2. **Start the app locally** (the user's `BUILDS: yes` covers `npm run dev` and similar). If preview and production share a database, set up the safe test copy first (next section).
+3. **Plan:** `python3 <skill-folder>/scripts/runtime.py . --plan` writes `.vibe-check/runtime/runtime.json` from the inventory. Fill it in from the code:
+   - `base_url`;
+   - `accounts` for test users A, B and admin (sign them up in the local app; their tokens or cookies stay in this git-ignored file and are never printed);
+   - `authz`: every route and endpoint, with an ID owned by A and who may use it (`allow`), admin-only routes as `allow: ["admin"]`;
+   - `login`, `endpoints` and `webhooks`;
+   - `flows`: sign-up, sign-in, sign-out, password reset, the app's main path, and the test-mode payment marked `"payment": true`;
+   - `pages`: the main pages for the phone-width check.
+4. **Run:** `python3 <skill-folder>/scripts/runtime.py . --run all --consent` (after `--setup-browser --consent` for browser flows). It writes `.vibe-check/runtime/summary.md`.
+5. **Use the results as evidence**, copied exactly: `| LIVE-002 | FAIL 🔬 Confirmed | RUN: runtime:authz-other-users → 1 case(s) where user B reached user A's data: … |`. `coverage.py` checks each against the saved result, its check, its verdict, its age and the user's `RUNTIME: yes`; a `CHECK: the running app → …` row is refused once the app was tested.
+6. **Clean up:** delete the test accounts and test data you created.
+
+`runtime.py` settles LIVE-002, LIVE-003, LIVE-004 and SEC-015 (who can reach what), SEC-055 (sensitive fields in responses), LIVE-006 and SEC-007 (rate limits), LIVE-007 (error leaks), SEC-037 (CORS), SEC-046 (headers), FIN-003 (webhook signatures), and LIVE-012 to LIVE-014 (browser flows, phone width, test payment). Uploads (LIVE-008), hunt proofs (LIVE-005) and the scanners (LIVE-009, LIVE-010) are still run by hand, with the same rules.
+
 ## When preview and production share one database
 
 Many app builders (Lovable, Bolt, Replit) point the preview at the same database as the live app, so live tests there would touch real users. Don't skip the whole area silently: offer, as a choice, a **separate test copy** with its own database (duplicate or remix the project, or a database branch where the platform has one), with payments in test mode. If the user says no, the running-app items stay `CHECK: the running app → …`.
@@ -26,3 +45,6 @@ Many app builders (Lovable, Bolt, Replit) point the preview at the same database
 - [ ] 🟡 LIVE-009 **OWASP ZAP baseline scan:** run ZAP's baseline (passive) scan against the staging URL, for example `docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t <staging URL>`, and review each warning with the second look. If Docker or ZAP isn't available, say so in *Tools run*.
 - [ ] 🟡 LIVE-010 **Known-issue templates (nuclei):** if `nuclei` is installed, run it against the staging URL with safe settings (exclude intrusive, DoS and fuzzing templates; low rate). Its community templates are updated as new vulnerabilities and misconfigurations are published. Review every match with the second look.
 - [ ] 🟢 LIVE-011 **The tests can be re-run:** the two-account, role and logged-out tests are saved as scripts (in `.vibe-check/proofs/`), and offered to the user as permanent tests in their suite (only with their OK, under the scope guard).
+- [ ] 🔴 LIVE-012 **The main flows work in a real browser:** sign-up, sign-in, sign-out, password reset and the app's main path complete, with no page errors, console errors or 5xx responses along the way.
+- [ ] 🟡 LIVE-013 **Pages fit a phone screen:** the main pages don't scroll sideways at 375px wide.
+- [ ] 🔴 LIVE-014 **The test-mode payment flow completes:** checkout in the processor's test mode finishes and the user gets what they paid for, once.

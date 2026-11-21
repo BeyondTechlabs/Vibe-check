@@ -495,7 +495,7 @@ def profile_hash(vc: Path):
     return _sha(json.dumps([mods, adds]).encode())
 
 
-NO_CARRY = re.compile(r"(?<![\w./-])(?:SQL|screenshot|ANSWER|AUTO|CARRIED|CHECK|ASK|LIVE)\s*:|`(?:npm|pnpm|yarn|npx|bun|curl|pip|pip-audit|osv-scanner|"
+NO_CARRY = re.compile(r"(?<![\w./-])(?:SQL|screenshot|ANSWER|AUTO|CARRIED|CHECK|ASK|LIVE|RUN)\s*:|`(?:npm|pnpm|yarn|npx|bun|curl|pip|pip-audit|osv-scanner|"
                       r"trivy|semgrep|nuclei|cargo|govulncheck|lighthouse|gh|supabase|firebase|vercel|wrangler)\b", re.I)
 
 
@@ -590,6 +590,47 @@ def verify_live_row(key, r, ev, vc):
         age = (datetime.now(timezone.utc) - datetime.fromisoformat(d["time"])).days
         if age > 30:
             out.append(f"{key}: {rid} was read {age} days ago: run live.py again")
+    except (KeyError, ValueError):
+        pass
+    return out
+
+
+RUN_RX = re.compile(r"^\s*RUN:\s*(runtime:[\w./-]+)\s*(?:→|->)\s*(.+?)\s*$", re.S)
+
+
+def load_runtime(vc: Path):
+    try:
+        d = json.loads((vc / "runtime" / "results.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        return None, {}
+    return d, {r["id"]: r for r in d.get("results", [])}
+
+
+def verify_run_row(key, r, ev, vc):
+    """RUN rows must copy a result runtime.py saved, after the user's yes, with the same verdict."""
+    m = RUN_RX.match(ev)
+    if not m:
+        return [f"{key}: write runtime evidence as 'RUN: <result id> → <summary>', copied from .vibe-check/runtime/summary.md"]
+    d, res = load_runtime(vc)
+    got = res.get(m.group(1))
+    if not got:
+        return [f"{key}: {m.group(1)} isn't in .vibe-check/runtime/results.json: run runtime.py (after the user's yes) and copy its result"]
+    out = []
+    ans = (vc / "answers.md").read_text("utf-8") if (vc / "answers.md").exists() else ""
+    if not d.get("consent") or not re.search(r"^\s*[-*]?\s*RUNTIME:\s*yes\b", ans, re.M | re.I):
+        out.append(f"{key}: the app was tested without a recorded yes: write 'RUNTIME: yes' in .vibe-check/answers.md after asking")
+    if key not in got.get("checks", []):
+        out.append(f"{key}: {m.group(1)} is evidence for {', '.join(got.get('checks', [])) or 'no check'}, not {key}")
+    want = {"pass": "PASS", "fail": "FAIL"}.get(got["status"])
+    if want and r != want:
+        out.append(f"{key}: {m.group(1)} says {got['status']}, so the row must be {want}")
+    if not want and r in ("PASS", "FAIL"):
+        out.append(f"{key}: {m.group(1)} is only '{got['status']}': it can't settle a PASS or FAIL alone")
+    if m.group(2).strip() != got["summary"].strip():
+        out.append(f"{key}: copy the summary of {m.group(1)} exactly: '{got['summary'][:90]}'")
+    try:
+        if (datetime.now(timezone.utc) - datetime.fromisoformat(d["time"])).days > 30:
+            out.append(f"{key}: the runtime tests are over 30 days old: run runtime.py again")
     except (KeyError, ValueError):
         pass
     return out
@@ -1014,6 +1055,9 @@ def main() -> int:
         if re.match(r"^\s*LIVE\s*:", ev):
             errors.extend(verify_live_row(key, r, ev, ledger_path.parent))
             on_word = True    # proved by live.py's saved result
+        if re.match(r"^\s*RUN\s*:", ev):
+            errors.extend(verify_run_row(key, r, ev, ledger_path.parent))
+            on_word = True    # proved by runtime.py's saved result
         if r in ("PASS", "FAIL") and not on_word:
             evidence_problems += check_evidence(key, ev, root)
         if r in ("PASS", "FAIL") and not on_word and not CHECKABLE.search(ev):
@@ -1142,6 +1186,9 @@ def main() -> int:
             errors.extend(check_problems(c, v[1], have_sql, db_answer))
             place = check_parts(v[1])[0].lower()
             hit = next((pv for pv in live_read for nm in live_names.get(pv, ()) if nm in place), None)
+            if "running app" in place and load_runtime(ledger_path.parent)[1] and "runtime.py" not in v[1]:
+                errors.append(f"{c}: the running app was tested: settle this with a result from .vibe-check/runtime/summary.md "
+                              f"('RUN: <id> → <summary>'), or say in tried: why runtime.py can't test it")
             if hit and "live.py" not in v[1]:
                 errors.append(f"{c}: the live {hit} account was read: settle this with its result from .vibe-check/live/summary.md "
                               f"('LIVE: <id> → <summary>') instead of a CHECK:, or say in tried: why live.py can't read it")

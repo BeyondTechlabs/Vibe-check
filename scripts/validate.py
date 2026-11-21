@@ -473,6 +473,19 @@ for _m in ["LIVE: <provider>: yes", "read-only", "SecurityAudit", "never reads s
 if "references/live-accounts.md" not in skill_main: err("SKILL.md must link references/live-accounts.md (v4.0)")
 if len(re.findall(r"^- \[ \] ", (REFS / "cloud-infra.md").read_text(), re.M)) < 45: err("cloud-infra.md should have the v4.0 account checks (45+)")
 
+# 36. v5.0 runtime tests of the running app
+_rt = (SK / "scripts" / "runtime.py").read_text() if (SK / "scripts" / "runtime.py").exists() else ""
+for _m in ["def allowed_target(", "RUNTIME: yes", "RUNTIME: playwright: yes", "--consent", "never run against production", "BURST = 12", "TIMEOUT = 10",
+           "def t_authz(", "def t_api(", "def t_webhooks(", "def t_browser(", "--no-save"]:
+    if _m not in _rt: err(f"runtime.py is missing '{_m}' (v5.0)")
+if re.search(r"^\s*(import|from)\s+(requests|playwright)\b", _rt, re.M): err("runtime.py must use the standard library only")
+for _m in ["def verify_run_row(", "RUN_RX"]:
+    if _m not in _cov: err(f"coverage.py is missing '{_m}' (v5.0)")
+_lt = (REFS / "live-tests.md").read_text()
+for _m in ["runtime.py", "RUNTIME: yes", "LIVE-012", "LIVE-013", "LIVE-014", "Clean up"]:
+    if _m not in _lt: err(f"live-tests.md is missing '{_m}' (v5.0)")
+if "runtime.py" not in skill_main: err("SKILL.md must point to scripts/runtime.py (v5.0)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")

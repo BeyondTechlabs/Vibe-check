@@ -9,6 +9,7 @@ Usage: python3 tests/test_scripts.py   (exit code 1 on any failure)
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import re
 import subprocess
@@ -843,6 +844,69 @@ def main() -> int:
             shutil.rmtree(out / "live")
             (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
 
+        # v5.0: runtime tests against a local app with planted problems
+        import fake_app
+        srv, base_url = fake_app.start()
+        try:
+            rt = out / "runtime"; rt.mkdir(exist_ok=True)
+            cfg = {"base_url": base_url,
+                   "accounts": {k: {"headers": {"Authorization": f"Bearer tok-{k}"}} for k in ("a", "b", "admin")},
+                   "authz": [{"method": "GET", "path": "/api/orders/1", "owner": "a", "allow": ["a", "admin"]},
+                             {"method": "GET", "path": "/api/admin/users", "allow": ["admin"]}],
+                   "login": {"method": "POST", "path": "/api/login", "body": {"email": "a@test.local", "password": "x"}},
+                   "endpoints": [{"method": "POST", "path": "/api/orders"}], "webhooks": [{"path": "/api/webhooks/stripe"}]}
+            (rt / "runtime.json").write_text(json.dumps(cfg))
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+            r = run("runtime.py", str(app), "--run", "all", "--consent")
+            check(r.returncode == 1 and "NOT RUN" in r.stdout and not (rt / "results.json").exists(), "runtime: the app is never tested without the user's recorded yes")
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\nRUNTIME: yes\n")
+            r = run("runtime.py", str(app), "--run", "all", "--consent")
+            check(r.returncode == 0 and (rt / "results.json").exists(), f"runtime: should test the local app:\n{r.stdout}{r.stderr[-300:]}")
+            got = {x["id"]: x for x in json.loads((rt / "results.json").read_text())["results"]}
+            for rid in ("authz-other-users", "authz-roles", "response-fields", "rate-limit-login", "error-leaks", "cors", "webhook-signatures"):
+                check(got.get(f"runtime:{rid}", {}).get("status") == "fail", f"runtime: planted problem {rid} not found: {got.get(f'runtime:{rid}')}")
+            check(got["runtime:authz-signed-out"]["status"] == "pass", "runtime: signed-out access is refused by the fake app and should pass")
+            check("tok-a" not in r.stdout and "tok-a" not in (rt / "summary.md").read_text(), "runtime: test account tokens must never be printed")
+            idor = got["runtime:authz-other-users"]
+            base_rows = [x for x in full if not x.startswith("| LIVE-002 |")] + inv_rows + hit_rows
+            good_run = f"| LIVE-002 | FAIL 🔬 Confirmed | RUN: runtime:authz-other-users → {idor['summary']} |"
+            r2 = run("coverage.py", str(ledger(out, base_rows + [good_run])))
+            check("LIVE-002:" not in r2.stdout, f"runtime: a correct RUN row should be accepted:\n{[l for l in r2.stdout.splitlines() if 'LIVE-002' in l]}")
+            r2 = run("coverage.py", str(ledger(out, base_rows + [good_run.replace("FAIL 🔬 Confirmed", "PASS")])))
+            check("so the row must be FAIL" in r2.stdout, "runtime: a RUN row with the wrong verdict should be rejected")
+            r2 = run("coverage.py", str(ledger(out, base_rows + [good_run.replace(idor["summary"], "all fine")])))
+            check("copy the summary" in r2.stdout, "runtime: a RUN row with an edited summary should be rejected")
+            r2 = run("coverage.py", str(ledger(out, base_rows + [good_run.replace("authz-other-users", "cors").replace(idor["summary"], got["runtime:cors"]["summary"])])))
+            check("not LIVE-002" in r2.stdout, "runtime: a RUN result can only settle its own checks")
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+            r2 = run("coverage.py", str(ledger(out, base_rows + [good_run])))
+            check("without a recorded yes" in r2.stdout, "runtime: RUN evidence without the user's yes should be rejected")
+            pw_dir = os.environ.get("VIBE_CHECK_PLAYWRIGHT")    # a folder with node_modules/playwright: runs the real browser tests
+            if pw_dir and (Path(pw_dir) / "node_modules" / "playwright").exists():
+                os.symlink(Path(pw_dir) / "node_modules", rt / "node_modules")
+                (out / "answers.md").write_text("RUNTIME: yes\n")
+                bcfg = dict(cfg, flows=[{"name": "home", "steps": [{"goto": "/"}, {"expect_text": "Shop"}]},
+                                        {"name": "cart", "steps": [{"goto": "/broken"}, {"expect_text": "Cart"}]},
+                                        {"name": "checkout", "payment": True, "steps": [{"goto": "/pay"}, {"click": "#pay"}, {"expect_text": "Payment received"}]}],
+                            pages=["/", "/wide"])
+                (rt / "runtime.json").write_text(json.dumps(bcfg))
+                r = run("runtime.py", str(app), "--run", "browser", "--consent")
+                got = {x["id"]: x for x in json.loads((rt / "results.json").read_text())["results"]}
+                check("1 of 2 flows broke: cart" in got.get("runtime:flows", {}).get("summary", ""), f"runtime: the browser should catch the page error on /broken only: {got.get('runtime:flows')}")
+                check(got.get("runtime:phone-width", {}).get("summary", "").endswith("/wide"), f"runtime: /wide should overflow a phone screen: {got.get('runtime:phone-width')}")
+                check(got.get("runtime:payment-flow", {}).get("status") == "pass", f"runtime: the test payment flow should pass: {got.get('runtime:payment-flow')}")
+                (rt / "node_modules").unlink()
+            cfg["base_url"] = "https://shop.example.com"; (rt / "runtime.json").write_text(json.dumps(cfg))
+            (out / "answers.md").write_text("RUNTIME: yes\n")
+            r = run("runtime.py", str(app), "--run", "api", "--consent")
+            check(r.returncode == 1 and "REFUSED" in r.stdout, "runtime: a non-local target must be refused without its own approval")
+            r = run("runtime.py", str(app), "--setup-browser", "--consent")
+            check(r.returncode == 1 and "NOT RUN" in r.stdout and not (rt / "node_modules").exists(), "runtime: Playwright is never installed without its own yes")
+        finally:
+            srv.shutdown()
+            shutil.rmtree(out / "runtime", ignore_errors=True)
+            (out / "answers.md").write_text(f"| {ask_id} | who may see this? | Not sure |\n")
+
         # v3.7 code map: every module part, and a helper can print just its own
         r = run("codemap.py", str(app))
         check(r.returncode == 0 and (out / "codemap.md").exists() and "## security" in (out / "codemap.md").read_text(), f"codemap: should write codemap.md:\n{r.stdout}{r.stderr}")
@@ -869,7 +933,7 @@ def main() -> int:
         check(f"found 0 of {len(answers)}" in r.stdout, f"bench: empty ledger should score 0: {r.stdout[:200]}")
 
     # version check: never blocks, never fails, says the right thing
-    import os, time
+    import time
     mine = re.search(r'version:\s*"([\d.]+)"', (ROOT / "skills/vibe-check/SKILL.md").read_text()).group(1)
     major = int(mine.split(".")[0])
     r = run("version_check.py", "--latest", f"{major + 1}.0.0")

@@ -202,7 +202,7 @@ Then write down:
 | AWS, Google Cloud, Azure, Kubernetes, Terraform or Docker in production | the **cloud-infra** section below |
 | A desktop app (Electron, Tauri) or a browser extension | the **desktop-extensions** section below |
 | Several languages or countries, or non-English users | `references/i18n.md` |
-| Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (two-account, role, logged-out, rate limits, errors, uploads, ZAP baseline, nuclei) | the **live-tests** section below |
+| Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (`scripts/runtime.py`: accounts, roles, rate limits, errors, webhooks, browser; ZAP, nuclei) | the **live-tests** section below |
 | An AI agent takes actions, or the project is an MCP server, plugin or tool provider | the **ai-agents** section below |
 
 Mark each item **PASS / FAIL / N/A / CAN'T TELL**, with evidence. Priority: 🔴 blocks launch · 🟡 fix before scale or paying users · 🟢 recommended.
@@ -333,6 +333,7 @@ Date: YYYY-MM-DD
 - **Blockers that depend on the country:** a 🔴 check marked *(blocker for EU users)* that fails in an app with no EU or EEA users is recorded as usual, with `outside the EU` in the evidence; it then counts as ⚠️ should-fix.
 - **Modules that don't apply:** for a profile module the profile rules out (no mobile app, no AI, no payments…), don't open its file. Write one row, `MOB-* | N/A | profile: no mobile app (profile.json)`, and move on.
 - **Ranges and `*` are for N/A only** (a platform section you don't use, a profile module that doesn't apply). Core modules are never N/A as a whole.
+- **`RUN:` rows** copy a result from `.vibe-check/runtime/summary.md` exactly (runtime tests of the local or approved staging app, the **live-tests** section), checked the same way against `RUNTIME: yes`.
 - **`LIVE:` rows** copy a result from `.vibe-check/live/summary.md` exactly; `coverage.py` checks it against the saved result, its check, its verdict, its age and the user's `LIVE: <provider>: yes`.
 - **Rows written by scripts, never by hand:** `AUTO:` rows in `ledger.d/01-auto.md` come from `autocheck.py` (checks a script can decide for certain: no lockfile, no CI config, no README…); `CARRIED from <date> run (<run>):` rows in `ledger.d/00-carried.md` come from `coverage.py --carry` (a pass or N/A whose check wording and every cited file are byte-for-byte unchanged since the last saved run). `coverage.py` re-runs the rule or re-hashes the files at every count, and rejects a row that no longer holds or was typed by hand. To redo a carried check, delete its row and check it again.
 - **`INV-<category>` rows:** checked/found for every inventory category that has items. **`H-` rows:** a verdict for every sweep hit. **`V-` rows:** a verdict for every component in `.vibe-check/versions.md`, with its source.
@@ -1798,6 +1799,25 @@ Load this file when the app supports more than one language or region, sells to 
 
 Load this file when the app can run locally or the user has a **staging or preview URL**, at the Full and Enterprise levels. Reading code shows what *should* happen; these tests show what *does* happen when someone actually tries. Each test is quick, safe and repeatable.
 
+### Run them with `runtime.py` (don't improvise requests)
+
+The tests are scripted, so results are the same every run and cost few tokens: the model fills in a plan and reads a summary.
+
+1. **Ask once, as a choice** (the rules below). For each yes write it in `.vibe-check/answers.md`: `RUNTIME: yes`; and `RUNTIME: playwright: yes` if the user also agrees to install Playwright and Chromium for browser flows (about 300–500 MB, into `.vibe-check/runtime/`, never the project's `package.json`; if Chromium can't be downloaded, an installed Google Chrome is used). A staging host needs its own line: `RUNTIME: target staging.example.com: yes`. Production is refused by the script.
+2. **Start the app locally** (the user's `BUILDS: yes` covers `npm run dev` and similar). If preview and production share a database, set up the safe test copy first (next section).
+3. **Plan:** `python3 <skill-folder>/scripts/runtime.py . --plan` writes `.vibe-check/runtime/runtime.json` from the inventory. Fill it in from the code:
+   - `base_url`;
+   - `accounts` for test users A, B and admin (sign them up in the local app; their tokens or cookies stay in this git-ignored file and are never printed);
+   - `authz`: every route and endpoint, with an ID owned by A and who may use it (`allow`), admin-only routes as `allow: ["admin"]`;
+   - `login`, `endpoints` and `webhooks`;
+   - `flows`: sign-up, sign-in, sign-out, password reset, the app's main path, and the test-mode payment marked `"payment": true`;
+   - `pages`: the main pages for the phone-width check.
+4. **Run:** `python3 <skill-folder>/scripts/runtime.py . --run all --consent` (after `--setup-browser --consent` for browser flows). It writes `.vibe-check/runtime/summary.md`.
+5. **Use the results as evidence**, copied exactly: `| LIVE-002 | FAIL 🔬 Confirmed | RUN: runtime:authz-other-users → 1 case(s) where user B reached user A's data: … |`. `coverage.py` checks each against the saved result, its check, its verdict, its age and the user's `RUNTIME: yes`; a `CHECK: the running app → …` row is refused once the app was tested.
+6. **Clean up:** delete the test accounts and test data you created.
+
+`runtime.py` settles LIVE-002, LIVE-003, LIVE-004 and SEC-015 (who can reach what), SEC-055 (sensitive fields in responses), LIVE-006 and SEC-007 (rate limits), LIVE-007 (error leaks), SEC-037 (CORS), SEC-046 (headers), FIN-003 (webhook signatures), and LIVE-012 to LIVE-014 (browser flows, phone width, test payment). Uploads (LIVE-008), hunt proofs (LIVE-005) and the scanners (LIVE-009, LIVE-010) are still run by hand, with the same rules.
+
 ### When preview and production share one database
 
 Many app builders (Lovable, Bolt, Replit) point the preview at the same database as the live app, so live tests there would touch real users. Don't skip the whole area silently: offer, as a choice, a **separate test copy** with its own database (duplicate or remix the project, or a database branch where the platform has one), with payments in test mode. If the user says no, the running-app items stay `CHECK: the running app → …`.
@@ -1822,6 +1842,9 @@ Many app builders (Lovable, Bolt, Replit) point the preview at the same database
 - [ ] 🟡 LIVE-009 **OWASP ZAP baseline scan:** run ZAP's baseline (passive) scan against the staging URL, for example `docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t <staging URL>`, and review each warning with the second look. If Docker or ZAP isn't available, say so in *Tools run*.
 - [ ] 🟡 LIVE-010 **Known-issue templates (nuclei):** if `nuclei` is installed, run it against the staging URL with safe settings (exclude intrusive, DoS and fuzzing templates; low rate). Its community templates are updated as new vulnerabilities and misconfigurations are published. Review every match with the second look.
 - [ ] 🟢 LIVE-011 **The tests can be re-run:** the two-account, role and logged-out tests are saved as scripts (in `.vibe-check/proofs/`), and offered to the user as permanent tests in their suite (only with their OK, under the scope guard).
+- [ ] 🔴 LIVE-012 **The main flows work in a real browser:** sign-up, sign-in, sign-out, password reset and the app's main path complete, with no page errors, console errors or 5xx responses along the way.
+- [ ] 🟡 LIVE-013 **Pages fit a phone screen:** the main pages don't scroll sideways at 375px wide.
+- [ ] 🔴 LIVE-014 **The test-mode payment flow completes:** checkout in the processor's test mode finishes and the user gets what they paid for, once.
 
 <a id="reporting"></a>
 
@@ -2147,7 +2170,7 @@ vibe-check: 🟢 SHIP · Score 91/100 · 112/118 checks · 0 blockers (0 checks)
 Post short progress lines as each step finishes, ticking them off, one line per step, never paragraphs:
 
 ```text
-Running vibe-check v4.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 ✅ Read your project · 214 files · Next.js + Supabase + Razorpay
 ✅ Matched your answers to your code · 🔀 1 difference: payments found
@@ -2162,7 +2185,7 @@ In tools with a to-do or task list, use it for the same steps instead.
 The chat shows the summary; the full report stays in the file. Save the same text as `.vibe-check/summary.md`.
 
 ```text
-Running vibe-check v4.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
+Running vibe-check v5.0.0 · Full check · art-club (~/.claude/skills/vibe-check)
 
 🔴 DO NOT SHIP · Score 69/100 (capped: 2 blockers open) · Needs work
 Since last check (2 Nov): Score 58 → 69 (+11) · ✅ 7 fixed · 🆕 1 new · ↩️ 0 came back
@@ -2304,6 +2327,7 @@ Go through this list and fix anything missing **before** sending the report:
 - [ ] The reply starts with `Running vibe-check v<version> · <level> check · <project name> (<skill folder>)`, the version is the latest (or the check couldn't connect), the project is the folder you were opened in (or the one the user named), and nothing from another project was reused. The report header shows the skill-files result (Step 0a), the vibe-check version and the Step 0 result: the update notice at the top if a newer version is out, or the "couldn't connect" line with the latest-release link.
 - [ ] The chat shows the one-screen summary (saved as `.vibe-check/summary.md`) with the Result block pasted from `coverage.py`, the six symbols used only for their meanings, and the questions asked as choices (with the question tool when there is one).
 - [ ] `coverage.py --save` stored this run in `.vibe-check/history/`.
+- [ ] Runtime tests were offered (local by default) and, with `RUNTIME: yes`, run with `runtime.py`; test accounts and data were cleaned up afterwards.
 - [ ] Signed-in accounts were offered as live checks; each one read has `LIVE: <provider>: yes` in `.vibe-check/answers.md`, only `live.py` read it, and no `CHECK:` row points at an account that was read.
 - [ ] The work was split by app size as `codemap.py` planned; each helper ran `coverage.py --part` on its rows; at most 15 questions were asked and every other open question is under *❓ Questions for you*.
 - [ ] Mobile apps: every inventory item (components, permissions, deep links, WebViews, bridges, Firebase paths) has a verdict, and `appscan.py` ran on a built app only after the user said yes.
@@ -2468,6 +2492,7 @@ Never call the audit complete while a 🔴 item is FAIL or an unresolved CAN'T T
   - Apps for children in the stores
   - Cloud account guardrails
   - Live database drifted from the repo
+  - Broken flows found in the running app
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -3018,6 +3043,12 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Safe fix:** bring production back to the migrations: re-apply the RLS and policy migrations (or write a new migration that matches what's live, if the live change was intended), then deploy schema changes only through migrations.
 **Trap:** "fixing" the drift by editing production by hand again, which leaves the repo and the database disagreeing the next time.
 **Verify:** `live.py supabase` shows RLS on for every table the migrations protect, and a fresh project built from the migrations has the same policies.
+
+#### Broken flows found in the running app
+**Covers:** LIVE-012, LIVE-014
+**Safe fix:** reproduce the broken step from `.vibe-check/runtime/summary.md` locally, fix its cause (a failing API call, a page error, a missing redirect), and add the flow as an automated test so it stays fixed; for payments, check the webhook grants access once and the success page doesn't grant it on its own.
+**Trap:** fixing the symptom on the page (hiding the error) while the API call behind it still fails.
+**Verify:** `runtime.py --run browser --consent` passes the flow, and the test-mode payment shows the purchase exactly once.
 
 <a id="sweep-patterns"></a>
 

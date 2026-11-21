@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits web and mobile apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?".
 license: MIT
 metadata:
-  version: "4.0.0"
+  version: "5.0.0"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
@@ -209,7 +209,7 @@ Then write down:
 | AWS, Google Cloud, Azure, Kubernetes, Terraform or Docker in production | `references/cloud-infra.md` |
 | A desktop app (Electron, Tauri) or a browser extension | `references/desktop-extensions.md` |
 | Several languages or countries, or non-English users | `references/i18n.md` |
-| Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (two-account, role, logged-out, rate limits, errors, uploads, ZAP baseline, nuclei) | `references/live-tests.md` |
+| Full and Enterprise, when the app runs locally or there's a staging URL: tests against the running app (`scripts/runtime.py`: accounts, roles, rate limits, errors, webhooks, browser; ZAP, nuclei) | `references/live-tests.md` |
 | An AI agent takes actions, or the project is an MCP server, plugin or tool provider | `references/ai-agents.md` |
 
 Mark each item **PASS / FAIL / N/A / CAN'T TELL**, with evidence. Priority: 🔴 blocks launch · 🟡 fix before scale or paying users · 🟢 recommended.

@@ -1,5 +1,20 @@
 # Changelog
 
+## v5.0.0 (2026-11-21)
+
+**Runtime tests: vibe-check can now test your running app, not only read its code, after you say yes.**
+- **New `runtime.py`,** run against the app on your own computer (or a staging host you approve by name; production is refused by the script):
+  - `--plan` writes `.vibe-check/runtime/runtime.json` from the inventory: routes, endpoints and test accounts to fill in.
+  - `--run authz`: every route as signed out, user A, user B and admin. Finds user B reaching user A's data, normal users reaching admin functions, signed-out access, and responses carrying password hashes, tokens or secrets.
+  - `--run api`: a small burst of 12 wrong sign-ins (is there a rate limit?), malformed input and unknown routes (do errors show stack traces or database errors?), CORS with a foreign origin, and security headers.
+  - `--run webhooks`: unsigned and wrongly signed payment webhooks must be refused.
+  - `--run browser`: sign-up, sign-in, the main path and the test-mode payment in a real browser (Playwright), with page errors, console errors and 5xx caught, plus a phone-width check at 375px.
+- **Playwright is optional** and installed only after a separate yes (`RUNTIME: playwright: yes`, about 300–500 MB), into `.vibe-check/runtime/`, never your project's `package.json`. If Chromium can't be downloaded, your installed Google Chrome is used instead.
+- **Proof:** results are written `RUN: <result id> → <summary>`. `coverage.py` checks each against the saved result, the check it belongs to, its verdict, its age and your recorded `RUNTIME: yes`. A "check yourself" item about the running app is refused once the app was tested.
+- **Safety, enforced by the script:** consent required, local targets only by default, small bursts, 10-second timeouts, no redirects followed, test accounts only, their tokens never printed. Test accounts and data are cleaned up afterwards.
+- **New checks:** LIVE-012 (main flows work in a browser), LIVE-013 (pages fit a phone screen), LIVE-014 (test-mode payment completes). New fix recipe for broken flows.
+- **Tests** run against a small local app with planted problems (user B reading user A's order, admin open to all, no sign-in limit, stack traces, CORS trusting any origin, unsigned webhooks); all are found, and a production URL is refused.
+
 ## v4.0.0 (2026-11-20)
 
 **Live account checks: vibe-check can now read your real cloud and platform settings, read-only, after you say yes.**

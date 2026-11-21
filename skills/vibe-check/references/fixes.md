@@ -97,6 +97,7 @@
   - Apps for children in the stores
   - Cloud account guardrails
   - Live database drifted from the repo
+  - Broken flows found in the running app
 <!-- /contents -->
 
 Use these patterns when fixing findings (Step 5), and for the **Fix** and **Prompt to fix it** lines in the report. Adapt each one to the project's stack and the versions actually installed. Check the official docs for that version before writing code.
@@ -647,4 +648,10 @@ Each recipe: **Safe fix** (the approach), **Trap** (how AI fixes usually go wron
 **Safe fix:** bring production back to the migrations: re-apply the RLS and policy migrations (or write a new migration that matches what's live, if the live change was intended), then deploy schema changes only through migrations.
 **Trap:** "fixing" the drift by editing production by hand again, which leaves the repo and the database disagreeing the next time.
 **Verify:** `live.py supabase` shows RLS on for every table the migrations protect, and a fresh project built from the migrations has the same policies.
+
+### Broken flows found in the running app
+**Covers:** LIVE-012, LIVE-014
+**Safe fix:** reproduce the broken step from `.vibe-check/runtime/summary.md` locally, fix its cause (a failing API call, a page error, a missing redirect), and add the flow as an automated test so it stays fixed; for payments, check the webhook grants access once and the success page doesn't grant it on its own.
+**Trap:** fixing the symptom on the page (hiding the error) while the API call behind it still fails.
+**Verify:** `runtime.py --run browser --consent` passes the flow, and the test-mode payment shows the purchase exactly once.
 
