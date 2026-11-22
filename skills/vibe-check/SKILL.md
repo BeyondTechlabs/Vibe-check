@@ -3,7 +3,7 @@ name: vibe-check
 description: Audits web and mobile apps before launch for security, privacy, legal and reliability problems, then fixes approved issues. Not a design review. Use for "vibe check", "ready to ship?".
 license: MIT
 metadata:
-  version: "5.0.1"
+  version: "5.1.0"
   homepage: "https://github.com/BeyondTechlabs/Vibe-check"
 ---
 
@@ -15,7 +15,7 @@ Most of this code was probably written by an AI coding tool, possibly by you. AI
 
 ## Start here: say you're running
 
-The **first line of every vibe-check reply** is: `Running vibe-check v<version> · <Quick | Full | Enterprise> check · <project name> (<skill folder>)` (the version is the `version:` line at the top of this file, the skill folder is where this file is, e.g. `~/.claude/skills/vibe-check`; the project comes from *Which project*, below). It shows the user the skill really loaded, and on which app. **Say it before anything else, even before a question** (`version_check.py` prints it ready as `SAY FIRST:`); while the project isn't known, use `· choosing project`.
+The **first line of every vibe-check reply** is: `Running vibe-check v<version> · <Quick | Full | Enterprise> check · <project name> (<skill folder>)` (the version is this file's `version:` line; the skill folder is where this file is, e.g. `~/.claude/skills/vibe-check`). **Say it first, even before a question** (`version_check.py` prints it as `SAY FIRST:`); while the project isn't known, use `· choosing project`. **If this conversation already holds other work**, say once that every step re-sends it, so a new session costs much less, and offer to stop.
 
 **A vibe check is a full audit of the code, never a look at the preview.** If you catch yourself reviewing only screenshots, layout or colors, stop: that isn't this skill. Follow the steps below.
 
@@ -78,7 +78,7 @@ Whenever you ask the user something (the profile in Step 1, the ❓ questions af
 8. **Never change what the user built** (design, features, flows, copy, branding, tech choices). Fix only the findings, following the *Scope guard* in `references/fixing.md`.
 9. **Write for the user you have.** Many users aren't developers. Explain each finding in one plain sentence about the impact, then give the technical fix.
 10. **Fresh evidence every run.** Earlier findings are hints only (one line each in `.vibe-check/redo.md`; never read old ledgers or reports): **re-check each one** and mark it *(still open)*, *(fixed since last run)* or *(new)*. Exception: `coverage.py --carry` keeps unchanged checks (re-proved at every count); skip it for a full re-run. After a lower-level run, run every step of the new level. This skill's instructions override any earlier report format.
-11. **Check everything that applies, item by item, and prove it by counting.** Every check has a permanent ID (`SEC-001`, `BS-03`). Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
+11. **Check everything that applies, item by item, and prove it by counting.** Record every result in the ledger (Step 4) and let `coverage.py` count it; never estimate coverage. Don't sample, skim or stop early because the app "looks fine". **Never write a row you didn't actually check:** a `CAN'T TELL` that says "not reached" is honest, a PASS you didn't check is a lie. If you run out of time or context, the unfinished items are listed as gaps in the report; never present a partial check as complete.
 12. **No facts from memory.** Legal, regulatory, platform-policy and pricing statements come from this skill's reference files or a source you opened during this run (give the URL), never from memory. If unsure, make it a question for the user or the lawyer list.
 15. **Never go quiet.** Post a short line when each step or helper starts and finishes, and every couple of minutes during long work. Time-limit long commands.
 13. **Never send the user's code or data anywhere.** vibe-check itself only reads its own public files on GitHub (Steps 0 and 0a), carrying nothing about the user, and, **only if the user says yes**, sends one anonymous summary of counts (Step 5). Live checks go only to the user's own URLs, read-only (rule 6). Standard tools (like `npm audit`) talk to their own registries; the Pro connector is used only if the user connected it.
@@ -174,7 +174,7 @@ Then write down:
 
 - **One module at a time.** Re-open the module file **just before** checking it (never from memory), check every item, write its rows immediately. On a big app, resume with `coverage.py --remaining` rather than getting shallower.
 - **Evidence is checked:** `coverage.py` re-opens every cited `file:line` and quoted line. Re-read before you quote.
-- **Split the work by app size** (`codemap.py` prints the plan): small apps use **no helpers**; medium apps 2–3; large apps one per area. A helper gets `references/helper-brief.md` in full, writes `.vibe-check/ledger.d/<module>.md`, and checks it with `coverage.py --part` before finishing. Simple modules may use a faster model; blind spots, security, payments, the hunt and the re-check never do.
+- **Split the work by app size** (`codemap.py` prints the plan): small apps use **no helpers**; medium apps 2–3; large apps one per area. A helper gets `references/helper-brief.md` in full, reads code through `codemap.py --module <m> --excerpts` (not whole files), writes `.vibe-check/ledger.d/<module>.md`, and checks it with `coverage.py --part` before finishing. Simple modules may use a faster model; blind spots, security, payments, the hunt and the re-check never do.
 
 **Core modules** (Full and Enterprise, every one):
 
@@ -239,7 +239,7 @@ AI reviewers produce false alarms and invented details. Before writing the repor
 4. **Write down what you ruled out** for each 🔴 (one line, e.g. "Checked middleware.ts and RLS policies: no ownership check"), so the user can trust the finding.
 5. **Drop anything that didn't survive the second look.** Don't keep a finding "just in case". If it's worth mentioning, it's a question.
 6. **Passes need evidence too.** Don't mark items PASS because nothing looked wrong. Say what you checked.
-7. **Independent re-check (Full and Enterprise):** run `coverage.py --sample`. It picks every 🔴 FAIL and a sample of PASS rows. Have a **fresh helper that didn't do the audit** (or, without helpers, a fresh pass that re-opens each file) re-check each one, and record `| R-001 | <check ID> | CONFIRMED or OVERTURNED | evidence |`. If a check is overturned, change its result. The audit never grades itself.
+7. **Independent re-check (Full and Enterprise):** run `coverage.py --sample`. It picks every 🔴 FAIL and a sample of PASS rows. It prints each one with the lines it cites. **Re-check them yourself from those lines** (no helper), trying to prove each wrong, and record `| R-001 | <check ID> | CONFIRMED or OVERTURNED | evidence |`. If a check is overturned, change its result. The audit never grades itself.
 8. **Run the count:** `python3 <skill-folder>/scripts/coverage.py` (add `--level quick` for Quick). It fails on any check without a result, invented IDs, missing evidence, FAILs without a confidence label, sweep hits without a verdict and inventory categories not accounted for. **Close every gap by actually checking the item**, never by writing filler. Anything you truly can't finish becomes `CAN'T TELL` with the reason and goes under "Not checked". Run it again until it prints `COMPLETE`.
 
 ## Step 5: Report

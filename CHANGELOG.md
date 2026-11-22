@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.1.0 (2026-11-22)
+
+**Token diet, part 1: the same checks, read more cheaply.** A Full check of a larger app (vibe-check-pro) used about 98% of a Pro plan's 5-hour limit: four helpers at 91k–292k tokens each, plus a main conversation that already held other work.
+- **Start the audit in a fresh session:** if the conversation already holds other work, vibe-check says once that every step re-sends it, so a new session costs much less, and offers to stop there.
+- **Helpers read excerpts, not whole files:** `codemap.py --module <modules> --excerpts` prints every line where a helper's modules appear, with 6 lines of context and line numbers, in one read. Short files (80 lines or fewer, or mostly matched) are printed whole, each file once even when several modules touch it, and the output stops at 700 lines with the remaining ranges listed. The helper brief no longer says to read the whole module file; it uses `--brief` and the excerpts, opens whole files only when a check needs it, never opens a file twice, and filters long outputs. On a project with large files, a helper's first read was about 85% smaller (about 50k characters instead of 326k).
+- **The re-check needs no helper:** `coverage.py --sample` now prints each sampled result with 8 lines either side of each line it cites (the cited line marked). The main conversation re-checks from those lines, trying to prove each one wrong, and opens a file only when the excerpt isn't enough. This replaces a separate re-check helper (about 100k tokens in the vibe-check-pro run).
+- **Tests:** numbered, merged ranges; the 700-line cap on a 3,000-line file; several modules printing each file once; and the re-check sample showing the cited lines.
+
 ## v5.0.1 (2026-11-21)
 
 **Fixes from two real reports (The Art Club and Trailmate): fewer questions, fairer blockers, cleaner PDFs, cheaper re-checks.**

@@ -5,7 +5,7 @@ Read this at the end of Step 5, before sending anything. Fix every unticked item
 Go through this list and fix anything missing **before** sending the report:
 
 - [ ] `profile.py` ran first; any answer that contradicts the code is listed under **Your answers vs your code**, and no module with code evidence was skipped without a `DEAD CODE:` proof.
-- [ ] The independent re-check ran (`coverage.py --sample`, `R-` rows from a fresh helper or fresh pass), and anything overturned was changed.
+- [ ] The independent re-check ran (`coverage.py --sample`, `R-` rows re-checked from the quoted lines, trying to prove each wrong), and anything overturned was changed.
 - [ ] `coverage.py --verify-report` printed `REPORT VERIFIED` for the saved report.
 - [ ] `inventory.py` and `sweep.py` ran (or the report says why not and the inventory and sweep were done by hand).
 - [ ] `coverage.py` printed `COMPLETE`, or every remaining gap is a `CAN'T TELL` with its reason and listed under "Not checked". The coverage table and score line in the report are **pasted from its output**, not typed.

@@ -331,6 +331,9 @@ def main() -> int:
         r = run("coverage.py", str(ledger(out, good, recheck=False)))
         check(r.returncode == 1 and "independent re-check" in r.stdout, "coverage: missing re-check rows should be rejected")
         samp = re.findall(r"^  ([A-Z0-9]+-\d{2,3})  PASS", run("coverage.py", str(ledger(out, good, recheck=False)), "--sample").stdout, re.M)
+        so = run("coverage.py", str(ledger(out, good, recheck=False)), "--sample").stdout
+        check(re.search(r"^    [\w/.\[\]-]+:1> ", so, re.M) and "no helper needed" in so,
+              f"v5.1: --sample should print the cited lines, marking the cited one:\n{so[:500]}")
         r = run("coverage.py", str(ledger(out, good, overturn=samp[0])))
         check(r.returncode == 1 and "overturned" in r.stdout, "coverage: an overturned check still marked PASS should be rejected")
 
@@ -982,6 +985,23 @@ def main() -> int:
         check(r.returncode == 0 and (out / "codemap.md").exists() and "## security" in (out / "codemap.md").read_text(), f"codemap: should write codemap.md:\n{r.stdout}{r.stderr}")
         r = run("codemap.py", str(app), "--module", "security")
         check(r.returncode == 0 and r.stdout.startswith("## security") and "## fintech" not in r.stdout, "codemap: --module should print only that module")
+        # v5.1: helpers read excerpts with line numbers instead of whole files
+        r = run("codemap.py", str(app), "--module", "security", "--excerpts")
+        check(r.returncode == 0 and r.stdout.startswith("## security: excerpts") and re.search(r"^### `[^`]+:\d+-\d+`$", r.stdout, re.M)
+              and re.search(r"^\s+\d+  \S", r.stdout, re.M), f"v5.1 codemap: --excerpts should print numbered line ranges:\n{r.stdout[:400]}")
+        sys.path.insert(0, str(SCRIPTS)); import codemap as cmod
+        check(cmod.windows([5, 7, 30], 100) == [(1, 13), (24, 36)] and cmod.windows([2], 4) == [(1, 4)], "v5.1 codemap: nearby matches merge into one range")
+        r = run("codemap.py", str(app), "--module", "security,fintech", "--excerpts")
+        heads = re.findall(r"^### `([^`:]+):", r.stdout, re.M)
+        check(r.stdout.startswith("## security + fintech: excerpts") and len(heads) == len(set(heads)),
+              f"v5.1 codemap: several modules print each file once:\n{r.stdout[:300]}")
+        big = app / "big_auth.js"
+        big.write_text("\n".join(f"const token{k} = auth(session{k});" if k % 20 == 0 else f"// line {k}" for k in range(1, 3001)))
+        run("codemap.py", str(app))
+        r = run("codemap.py", str(app), "--module", "security", "--excerpts")
+        shown = len(re.findall(r"^\s+\d+  ", r.stdout, re.M))
+        check(shown <= cmod.EXCERPT_MAX_LINES and "more ranges** past the" in r.stdout, f"v5.1 codemap: excerpts must stop at {cmod.EXCERPT_MAX_LINES} lines ({shown})")
+        big.unlink(); run("codemap.py", str(app))
 
     # hunt benchmark: bugs stay invisible to the sweep (novel), and the scorer works
     bench = ROOT / "bench"

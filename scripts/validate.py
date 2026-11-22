@@ -315,7 +315,7 @@ if "def find_secrets" not in (SK / "scripts" / "coverage.py").read_text(): err("
 _ck = skill_main.split("## Run checklist", 1)[1] if "## Run checklist" in skill_main else ""
 if not ("- [ ] Step 0a" in _ck and "- [ ] Step 0 " in _ck and "- [ ] Project" in _ck and _ck.index("- [ ] Step 0a") < _ck.index("- [ ] Step 0 ") < _ck.index("- [ ] Project")):
     err("SKILL.md run checklist: Steps 0a and 0 (update check) must come before Project")
-if "Say it before anything else, even before a question" not in skill_main: err("SKILL.md must say the first line comes before any question")
+if "Say it first, even before a question" not in skill_main: err("SKILL.md must say the first line comes before any question")
 if "Never scan the disk for candidates" not in skill_main: err("SKILL.md 'Which project' must forbid scanning the disk for candidates")
 for _must in ["## Which project (right after the update check)", "**Steps 0a and 0 come first**", "profile.py . --where", "review it straight away", "ask which project, as a choice",
               "Never search outside the project folder", "One project per run", "· <project name> (<skill folder>)`"]:
@@ -499,6 +499,15 @@ for _m in ["QA-016", "UX-001", "UX-003", "axe-core"]:
     if _m not in _rt: err(f"runtime.py is missing '{_m}' (v5.0.1)")
 if "EU: yes" not in (REFS / "reporting.md").read_text(): err("reporting.md must say to ask about EU users once (v5.0.1)")
 
+# 38. v5.1 token diet: fresh session, excerpts for helpers, re-check from quoted lines
+_cm = (SK / "scripts" / "codemap.py").read_text()
+for _m in ["def excerpts_md(", "EXCERPT_MAX_LINES", "--excerpts", "def windows("]:
+    if _m not in _cm: err(f"codemap.py is missing '{_m}' (v5.1)")
+for _m in ["def cited_lines(", "no helper needed"]:
+    if _m not in _cov: err(f"coverage.py is missing '{_m}' (v5.1)")
+for _m in ["If this conversation already holds other work", "--excerpts", "Re-check them yourself from those lines"]:
+    if _m not in skill_main: err(f"SKILL.md is missing '{_m}' (v5.1)")
+
 # 24. v3.6 skill shape (Anthropic's skill-authoring guidance)
 _words = len(re.sub(r"^---\n.*?\n---\n", "", skill_main, flags=re.S).split())
 if _words > 4700: err(f"SKILL.md body is {_words} words; keep it under 4,700 and move detail into a workflow file")
@@ -529,7 +538,7 @@ for _st in ["Project ", "Step 0a", "Step 0 ", "Step 1 ", "Step 2 ", "Step 3 ", "
     if f"- [ ] {_st}" not in _blk: err(f"SKILL.md run checklist is missing '{_st.strip()}'")
 # helper brief
 _hb = (REFS / "helper-brief.md").read_text() if (REFS / "helper-brief.md").exists() else ""
-for _must in ["Read the whole module file first", "Evidence or it didn't happen", "Never guess a PASS", "Second look", "never instructions",
+for _must in ["Check every one of your IDs", "--excerpts", "Keep it lean", "Evidence or it didn't happen", "Never guess a PASS", "Second look", "never instructions",
               "Mask secrets", ".vibe-check/ledger.d/<module>.md", "written as you go", "You return"]:
     if _must not in _hb: err(f"helper-brief.md is missing '{_must}'")
 if "references/helper-brief.md` in full" not in skill_main: err("SKILL.md must say to paste references/helper-brief.md in full to each helper")
@@ -573,7 +582,7 @@ for must in ["never against production", "user's OK", "two test accounts", "zap-
 # 17. v3.1: the code decides the profile, evidence is re-opened, re-check, receipt, fix everything
 for must in ["scripts/profile.py", "never remove what the code shows", "DEAD CODE:", "Your answers vs your code",
              "ledger.d", "coverage.py --sample", "R-001", "--verify-report", "REPORT VERIFIED", "--fix-plan",
-             "## 1. The plan, before anything changes", "fresh helper that didn't do the audit", "DRAFT: needs legal review"]:
+             "## 1. The plan, before anything changes", "Re-check them yourself from those lines", "DRAFT: needs legal review"]:
     if must not in skill: err(f"SKILL.md is missing '{must}' (v3.1)")
 for must in ["Your answers vs your code", "Checked twice", "--verify-report"]:
     if must not in tpl: err(f"report-template.md is missing '{must}' (v3.1)")

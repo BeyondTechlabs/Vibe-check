@@ -723,6 +723,15 @@ def md_short(text, n):
     return text
 
 
+def cited_lines(ev, root):
+    """(file, line) pairs cited as file:line in evidence that exist in the project."""
+    out = []
+    for rel, ln in re.findall(r"((?:[\w@.\[\]-]+/)*[\w@\[\]-][\w@.\[\]-]*\.\w{1,8}):(\d+)", ev):
+        if (root / rel).is_file() and (rel, int(ln)) not in out:
+            out.append((rel, int(ln)))
+    return out
+
+
 def short(text, n):
     text = re.sub(r"\s+", " ", str(text)).strip()
     return text if len(text) <= n else text[:n - 1].rsplit(" ", 1)[0] + "…"
@@ -1180,16 +1189,24 @@ def main() -> int:
 
     sample = sample_ids(results, checks, seed, app_size(ledger_path.parent)[0]) if level in ("full", "enterprise") else []
     if want_sample:
-        print("Independent re-check sample (have a fresh helper, or a fresh pass that re-reads the files, check each one):")
+        print("Independent re-check sample. Re-check each one from the lines below, trying to prove it wrong; open a whole file only "
+              "when the excerpt isn't enough (v5.1: no helper needed):")
         for c in sample:
-            print(f"  {c}  {results[c][0]}  {checks[c][2]}  ({results[c][1][:70]})")
-        print("Record each as | R-001 | <ID> | CONFIRMED or OVERTURNED | evidence |. If OVERTURNED, change that check's result.")
+            print(f"\n  {c}  {results[c][0]}  {checks[c][2]}\n    evidence: {short(results[c][1], 220)}")
+            for rel, ln in cited_lines(results[c][1], root)[:2]:
+                try:
+                    lines = (root / rel).read_text("utf-8", "replace").splitlines()
+                except OSError:
+                    continue
+                for k in range(max(1, ln - 8), min(len(lines), ln + 8) + 1):
+                    print(f"    {rel}:{k}{'>' if k == ln else ' '} {lines[k - 1][:180]}")
+        print("\nRecord each as | R-001 | <ID> | CONFIRMED or OVERTURNED | evidence |. If OVERTURNED, change that check's result.")
         return 0
     if sample and not missing:
         no_row = [c for c in sample if c not in recheck_rows]
         if no_row:
             errors.append(f"independent re-check: {len(no_row)} sampled checks have no R- row ({', '.join(no_row[:8])}"
-                          f"{' …' if len(no_row) > 8 else ''}). Run coverage.py --sample, and have a fresh helper re-check them")
+                          f"{' …' if len(no_row) > 8 else ''}). Run coverage.py --sample and re-check each from the lines it prints")
         for c in sample:
             if c in recheck_rows:
                 rk, verdict, rev = recheck_rows[c]

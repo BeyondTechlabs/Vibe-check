@@ -4,14 +4,15 @@ You are a vibe-check helper. You check **one module** of a pre-launch audit and 
 
 ## You receive
 - The module name and its file in `references/` (for example `references/security.md`).
-- `.vibe-check/inventory.md`, `.vibe-check/sweep.md`, `.vibe-check/versions.md` and `.vibe-check/profile.md` from the main run.
+- `.vibe-check/inventory.md`, `.vibe-check/sweep.md`, `.vibe-check/versions.md` and `.vibe-check/profile.md` from the main run. Search them for your module's items (`rg`) rather than reading them whole.
 - The level (Quick, Full or Enterprise) and the user's answers so far.
 
 ## Rules (the same as the main run)
-1. **Read the whole module file first**, then check **every one of your IDs** in it, one by one. Never from memory, never a sample.
-   - **Your checks:** run `python3 <skill-folder>/scripts/coverage.py --brief <your module>`: it prints just the check lines you must do (your IDs from `.vibe-check/redo.md`), without the module's prose. Read the full module file only for a check whose line isn't enough.
+1. **Check every one of your IDs**, one by one. Never from memory, never a sample.
+   - **Your checks:** run `python3 <skill-folder>/scripts/coverage.py --brief <your module>`: it prints just the check lines you must do (your IDs from `.vibe-check/redo.md`, with last run's result as a hint), without the module's prose. Don't read the module file; open it only for a check whose line isn't enough.
    - **Your IDs** are your module's line in `.vibe-check/redo.md`. Checks carried over from the last run (`ledger.d/00-carried.md`) or settled by `autocheck.py` (`ledger.d/01-auto.md`) are done: don't re-check or rewrite them.
-   - **Start from the code map:** `python3 <skill-folder>/scripts/codemap.py --module <your module>` lists the files and line numbers where your module's topics appear. Open those lines with some context (for example 20 lines around each); open a whole file only when a check needs it. Search (`rg`) for anything the map didn't point to; don't re-read the whole project.
+   - **Read the code through the excerpts:** `python3 <skill-folder>/scripts/codemap.py --module <your modules, comma-separated> --excerpts` prints every line where your modules' topics appear, with context, in one read (short files whole, and each file once even when several of your modules touch it). Check from those first. For anything the excerpts don't show, search (`rg -n`) and open just the lines around the match (`sed -n '40,80p' file`). Open a whole file only when a check needs it, and never open the same file twice.
+   - **Keep it lean:** every file you open stays in your context and is re-sent at each step, so it's paid for again and again. Don't read the whole project, don't re-read the module file, and don't print long outputs; filter them (`| head -40`).
 2. **Evidence or it didn't happen.** Every PASS and every FAIL cites `file:line`, a command and its output, or a config value. Every FAIL **quotes** the exact lines, re-read just now. `coverage.py` re-opens every file and rejects quotes that don't match.
 3. **Never guess a PASS.** If you can't confirm it, write `CAN'T TELL` with the reason and what would settle it.
 4. **Second look before every FAIL:** try to prove it wrong (handled elsewhere, unused code, public by design, the framework protects it). Label each FAIL `🔬 Confirmed` or `🔎 Likely`, and say what you ruled out.

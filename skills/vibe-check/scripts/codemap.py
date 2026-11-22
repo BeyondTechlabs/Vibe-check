@@ -130,17 +130,77 @@ def module_md(name, hits, files):
     return out + [""]
 
 
+EXCERPT_CONTEXT = 6      # lines around each match
+EXCERPT_MAX_LINES = 700  # per module: past this, the rest is listed as file:line to open if needed
+EXCERPT_LINE_CHARS = 200
+
+
+def windows(nums, total, ctx=EXCERPT_CONTEXT):
+    """Merge matches into line ranges with context: [(start, end), ...]."""
+    out = []
+    for n in sorted(set(nums)):
+        a, b = max(1, n - ctx), min(total, n + ctx)
+        if out and a <= out[-1][1] + 1:
+            out[-1] = (out[-1][0], max(out[-1][1], b))
+        else:
+            out.append((a, b))
+    return out
+
+
+def excerpts_md(root: Path, name, hits):
+    """v5.1: the module's matching lines with context, ready to read, so a helper doesn't open whole files.
+    A short file, or one the ranges would mostly cover anyway, is printed whole, once."""
+    out = [f"## {name}: excerpts", "",
+           f"Each match with {EXCERPT_CONTEXT} lines around it (line numbers on the left). Check from these first. "
+           "Open a whole file only when a check needs more than its excerpt, and never open the same file twice.", ""]
+    used, rest = 0, []
+    for rel, nums in hits.items():
+        try:
+            lines = (root / rel).read_text("utf-8", "replace").splitlines()
+        except OSError:
+            continue
+        wins = windows(nums, len(lines))
+        if len(lines) <= 80 or sum(b - a + 1 for a, b in wins) >= 0.6 * len(lines):
+            wins = [(1, len(lines))] if lines else []
+        for a, b in wins:
+            if used + (b - a + 1) > EXCERPT_MAX_LINES:
+                rest.append(f"`{rel}:{a}-{b}`"); continue
+            out.append(f"### `{rel}:{a}-{b}`"); out.append("```")
+            for k in range(a, b + 1):
+                ln = lines[k - 1]
+                out.append(f"{k:>5}  {ln[:EXCERPT_LINE_CHARS]}{'…' if len(ln) > EXCERPT_LINE_CHARS else ''}")
+            out.append("```"); used += b - a + 1
+    if rest:
+        out += ["", f"**{len(rest)} more ranges** past the {EXCERPT_MAX_LINES}-line limit (open only those a check needs): " + ", ".join(rest)]
+    if not hits:
+        out.append("No lines match this module's topics.")
+    return out + [""]
+
+
 def main(argv):
     module = None
+    want_excerpts = "--excerpts" in argv
+    argv = [a for a in argv if a != "--excerpts"]
     if "--module" in argv:
         i = argv.index("--module"); module = argv[i + 1]; del argv[i:i + 2]
     root = Path(argv[0] if argv else ".").resolve()
     vc = root / ".vibe-check"
     if module:
         data = json.loads((vc / "codemap.json").read_text("utf-8")) if (vc / "codemap.json").exists() else build(root)
-        if module not in data["modules"]:
-            print(f"No module '{module}'. Modules: {', '.join(data['modules'])}"); return 2
-        print("\n".join(module_md(module, data["modules"][module], data["files"])))
+        names = [m.strip() for m in module.split(",") if m.strip()]
+        bad = [m for m in names if m not in data["modules"]]
+        if bad:
+            print(f"No module '{bad[0]}'. Modules: {', '.join(data['modules'])}"); return 2
+        if want_excerpts:   # several modules: one set of ranges, so a file shared by them is printed once
+            merged = {}
+            for m in names:
+                for rel, nums in data["modules"][m].items():
+                    merged.setdefault(rel, []).extend(nums)
+            merged = dict(sorted(merged.items(), key=lambda kv: -len(kv[1])))
+            print("\n".join(excerpts_md(root, " + ".join(names), merged)))
+        else:
+            for m in names:
+                print("\n".join(module_md(m, data["modules"][m], data["files"])))
         return 0
     data = build(root)
     vc.mkdir(exist_ok=True)
@@ -148,7 +208,8 @@ def main(argv):
     size, plan = size_plan(len(data["files"]))
     md = ["# vibe-check code map", "", f"**App size: {size}** ({len(data['files'])} code files). **Plan:** {plan}.", "",
           f"{len(data['files'])} code files. Helpers: read only your module's part "
-          "(`python3 <skill-folder>/scripts/codemap.py --module <name>`), then open only those lines.", "",
+          "(`python3 <skill-folder>/scripts/codemap.py --module <name> --excerpts` prints those lines with context); "
+          "open a whole file only when a check needs it.", "",
           "## Files", "", "| File | Lines | Defines |", "|---|---|---|"]
     for rel, info in data["files"].items():
         md.append(f"| `{rel}` | {info['lines']} | {', '.join(info['defines'][:8])} |")
